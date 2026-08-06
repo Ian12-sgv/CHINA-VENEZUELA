@@ -1,0 +1,4 @@
+interface:
+  display_name: "Revisión de código"
+  short_description: "Revisa cambios de código con foco en seguridad y alcance."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

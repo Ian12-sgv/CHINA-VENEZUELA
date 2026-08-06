@@ -1,0 +1,4 @@
+interface:
+  display_name: "Autenticación y roles"
+  short_description: "Implementa JWT, autorización, roles y políticas."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

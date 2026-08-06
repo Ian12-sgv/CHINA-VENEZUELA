@@ -1,0 +1,4 @@
+interface:
+  display_name: "Despliegue Windows e IIS"
+  short_description: "Prepara despliegues seguros de ASP.NET Core en IIS."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

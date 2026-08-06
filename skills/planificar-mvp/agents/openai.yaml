@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planificación MVP"
+  short_description: "Planifica entregas MVP sin ampliar el alcance."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditoría operativa"
+  short_description: "Diseña trazabilidad y auditoría inmutable del sistema."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

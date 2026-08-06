@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChinaVenezuela.Api/ChinaVenezuela.Api.csproj" />
+    <Project Path="src/ChinaVenezuela.Application/ChinaVenezuela.Application.csproj" />
+    <Project Path="src/ChinaVenezuela.Domain/ChinaVenezuela.Domain.csproj" />
+    <Project Path="src/ChinaVenezuela.Infrastructure/ChinaVenezuela.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChinaVenezuela.Application.Tests/ChinaVenezuela.Application.Tests.csproj" />
+  </Folder>
+</Solution>

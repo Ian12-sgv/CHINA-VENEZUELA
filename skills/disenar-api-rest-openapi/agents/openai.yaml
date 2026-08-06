@@ -1,0 +1,4 @@
+interface:
+  display_name: "API REST y OpenAPI"
+  short_description: "Diseña endpoints REST documentados con OpenAPI."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

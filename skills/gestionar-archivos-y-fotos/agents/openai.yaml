@@ -1,0 +1,4 @@
+interface:
+  display_name: "Archivos y fotos"
+  short_description: "Gestiona archivos, fotos y metadatos operativos."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

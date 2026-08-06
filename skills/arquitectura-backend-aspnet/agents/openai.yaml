@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arquitectura backend ASP.NET"
+  short_description: "Diseña cambios backend modulares y compatibles con ASP.NET Core."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

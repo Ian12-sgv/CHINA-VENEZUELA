@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reportes operativos"
+  short_description: "Diseña reportes y métricas de la operación logística."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

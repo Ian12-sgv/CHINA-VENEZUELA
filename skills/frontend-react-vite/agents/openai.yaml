@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend React y Vite"
+  short_description: "Construye interfaces operativas con React, TypeScript y Vite."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

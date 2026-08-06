@@ -1,0 +1,4 @@
+interface:
+  display_name: "Control de alcance"
+  short_description: "Evalúa solicitudes y protege el alcance cerrado del proyecto."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

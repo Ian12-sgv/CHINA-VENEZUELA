@@ -1,0 +1,4 @@
+interface:
+  display_name: "Modelo de datos PostgreSQL"
+  short_description: "Diseña esquemas relacionales, migraciones e índices PostgreSQL."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

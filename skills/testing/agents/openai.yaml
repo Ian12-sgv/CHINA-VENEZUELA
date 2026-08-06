@@ -1,0 +1,4 @@
+interface:
+  display_name: "Testing"
+  short_description: "Define y añade pruebas proporcionales al cambio solicitado."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

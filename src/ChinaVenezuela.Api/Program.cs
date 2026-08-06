@@ -1,0 +1,28 @@
+using ChinaVenezuela.Api.ExceptionHandling;
+using ChinaVenezuela.Application.Catalogos.Interfaces;
+using ChinaVenezuela.Application.Catalogos.Services;
+using ChinaVenezuela.Application.Recepciones.Interfaces;
+using ChinaVenezuela.Application.Recepciones.Services;
+using ChinaVenezuela.Infrastructure.Catalogos;
+using ChinaVenezuela.Infrastructure.Persistence;
+using ChinaVenezuela.Infrastructure.Recepciones;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("PostgreSql") ?? throw new InvalidOperationException("La cadena de conexión 'PostgreSql' es obligatoria.");
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddDbContext<ChinaVenezuelaDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<ICompraRecibidaRepository, CompraRecibidaRepository>();
+builder.Services.AddScoped<ICompraRecibidaService, CompraRecibidaService>();
+builder.Services.AddScoped<ICatalogoRepository, CatalogoRepository>();
+builder.Services.AddScoped<ICatalogoService, CatalogoService>();
+var app = builder.Build();
+app.UseExceptionHandler();
+app.MapOpenApi();
+app.MapControllers();
+app.Run();
+public partial class Program;

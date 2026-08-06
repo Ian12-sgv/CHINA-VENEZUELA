@@ -1,0 +1,4 @@
+interface:
+  display_name: "Documentación técnica"
+  short_description: "Mantiene documentación técnica precisa y actualizada."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."

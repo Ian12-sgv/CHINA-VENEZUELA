@@ -1,0 +1,4 @@
+interface:
+  display_name: "Worker Service"
+  short_description: "Diseña tareas asíncronas y procesos en segundo plano."
+  default_prompt: "Usa $(System.Collections.Hashtable.n) para trabajar en el Sistema de Compras y Envios China a Venezuela."
