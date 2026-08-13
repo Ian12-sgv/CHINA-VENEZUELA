@@ -1,4 +1,4 @@
-namespace ChinaVenezuela.Application.Recepciones.Contracts;
+﻿namespace ChinaVenezuela.Application.Recepciones.Contracts;
 
 public sealed record CrearCompraRecibidaRequest(
     Guid? ContenedorCompartidoId,
@@ -10,7 +10,8 @@ public sealed record CrearCompraRecibidaRequest(
     DateOnly? FechaLlegada,
     string? Aduana,
     string PuertoLlegada,
-    Guid? MarcaBultoId);
+    Guid? MarcaBultoId,
+    string ReceptorCodigoUsuario);
 
 public sealed record ActualizarCompraRecibidaRequest(
     Guid? ContenedorCompartidoId,
@@ -22,7 +23,8 @@ public sealed record ActualizarCompraRecibidaRequest(
     DateOnly? FechaLlegada,
     string? Aduana,
     string PuertoLlegada,
-    Guid? MarcaBultoId);
+    Guid? MarcaBultoId,
+    string ReceptorCodigoUsuario);
 
 public sealed record CompraRecibidaResponse(
     Guid Id,
@@ -36,5 +38,10 @@ public sealed record CompraRecibidaResponse(
     string? Aduana,
     string PuertoLlegada,
     Guid? MarcaBultoId,
+    string? ReceptorCodigoUsuario,
+    string? ReceptorNombre,
+    string? ReceptorCorreo,
     DateTimeOffset FechaCreacionUtc,
     DateTimeOffset? FechaActualizacionUtc);
+
+

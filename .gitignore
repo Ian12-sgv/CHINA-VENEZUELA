@@ -13,3 +13,9 @@ frontend/dist/
 .vs/
 .vscode/
 .idea/
+# Local deployment packages and runtime logs
+backend-publicar*/
+.logs/
+*.log
+*.rar
+*.log.err

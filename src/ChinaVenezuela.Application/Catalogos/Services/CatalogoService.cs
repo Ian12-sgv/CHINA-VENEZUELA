@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ChinaVenezuela.Application.Catalogos.Contracts;
 using ChinaVenezuela.Application.Catalogos.Interfaces;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
@@ -5,76 +6,45 @@ using ChinaVenezuela.Domain.Catalogos;
 
 namespace ChinaVenezuela.Application.Catalogos.Services;
 
-public sealed class CatalogoService(ICatalogoRepository repository) : ICatalogoService
+public sealed partial class CatalogoService(ICatalogoRepository repository) : ICatalogoService
 {
-    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerEmpresasAsync(CancellationToken cancellationToken) => (await repository.ObtenerEmpresasAsync(cancellationToken)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
-    public async Task<CatalogoResponse> CrearEmpresaAsync(CrearCatalogoRequest request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<EmpresaResponse>> ObtenerEmpresasAsync(CancellationToken ct) => (await repository.ObtenerEmpresasAsync(ct)).Select(x => new EmpresaResponse(x.Id, x.Nombre, x.Rif, x.Clasificacion)).ToArray();
+    public async Task<EmpresaResponse> CrearEmpresaAsync(CrearEmpresaRequest request, CancellationToken ct)
     {
-        var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteEmpresaConNombreAsync(nombre, null, cancellationToken)) throw new ConflictoException("Ya existe una empresa con ese nombre.");
-        var empresa = new Empresa(nombre); await repository.AgregarEmpresaAsync(empresa, cancellationToken); await repository.GuardarCambiosAsync(cancellationToken); return new(empresa.Id, empresa.Nombre);
+        var nombre = ValidarNombre(request.Nombre); var rif = NormalizarRif(request.Rif);
+        if (await repository.ExisteEmpresaConNombreAsync(nombre, null, ct)) throw new ConflictoException("Ya existe una empresa con ese nombre.");
+        if (await repository.ExisteEmpresaConRifAsync(rif, null, ct)) throw new ConflictoException($"Ya existe una empresa registrada con el RIF {rif}.");
+        var empresa = new Empresa(nombre, rif, request.Clasificacion); await repository.AgregarEmpresaAsync(empresa, ct); await repository.GuardarCambiosAsync(ct); return new(empresa.Id, empresa.Nombre, empresa.Rif, empresa.Clasificacion);
     }
-    public async Task<CatalogoResponse> ActualizarEmpresaAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken cancellationToken)
+    public async Task<EmpresaResponse> ActualizarEmpresaAsync(Guid id, ActualizarEmpresaRequest request, CancellationToken ct)
     {
-        var empresa = await ObtenerEmpresaRequeridaAsync(id, cancellationToken); var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteEmpresaConNombreAsync(nombre, id, cancellationToken)) throw new ConflictoException("Ya existe una empresa con ese nombre.");
-        empresa.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(cancellationToken); return new(empresa.Id, empresa.Nombre);
+        var empresa = await ObtenerEmpresaRequeridaAsync(id, ct); var nombre = ValidarNombre(request.Nombre); var rif = NormalizarRif(request.Rif);
+        if (await repository.ExisteEmpresaConNombreAsync(nombre, id, ct)) throw new ConflictoException("Ya existe una empresa con ese nombre.");
+        if (await repository.ExisteEmpresaConRifAsync(rif, id, ct)) throw new ConflictoException($"Ya existe una empresa registrada con el RIF {rif}.");
+        empresa.Actualizar(nombre, rif, request.Clasificacion); await repository.GuardarCambiosAsync(ct); return new(empresa.Id, empresa.Nombre, empresa.Rif, empresa.Clasificacion);
     }
-    public async Task EliminarEmpresaAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var empresa = await ObtenerEmpresaRequeridaAsync(id, cancellationToken);
-        if (await repository.EmpresaEstaEnUsoAsync(id, cancellationToken)) throw new ConflictoException("No se puede eliminar la empresa porque está asociada a compras recibidas.");
-        repository.EliminarEmpresa(empresa); await repository.GuardarCambiosAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerMarcasBultoAsync(CancellationToken cancellationToken) => (await repository.ObtenerMarcasBultoAsync(cancellationToken)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
-    public async Task<CatalogoResponse> CrearMarcaBultoAsync(CrearCatalogoRequest request, CancellationToken cancellationToken)
-    {
-        var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteMarcaBultoConNombreAsync(nombre, null, cancellationToken)) throw new ConflictoException("Ya existe una marca de bulto con ese nombre.");
-        var marca = new MarcaBulto(nombre); await repository.AgregarMarcaBultoAsync(marca, cancellationToken); await repository.GuardarCambiosAsync(cancellationToken); return new(marca.Id, marca.Nombre);
-    }
-    public async Task<CatalogoResponse> ActualizarMarcaBultoAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken cancellationToken)
-    {
-        var marca = await ObtenerMarcaRequeridaAsync(id, cancellationToken); var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteMarcaBultoConNombreAsync(nombre, id, cancellationToken)) throw new ConflictoException("Ya existe una marca de bulto con ese nombre.");
-        marca.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(cancellationToken); return new(marca.Id, marca.Nombre);
-    }
-    public async Task EliminarMarcaBultoAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var marca = await ObtenerMarcaRequeridaAsync(id, cancellationToken);
-        if (await repository.MarcaBultoEstaEnUsoAsync(id, cancellationToken)) throw new ConflictoException("No se puede eliminar la marca porque está asociada a compras recibidas.");
-        repository.EliminarMarcaBulto(marca); await repository.GuardarCambiosAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerContenedoresCompartidosAsync(CancellationToken cancellationToken) => (await repository.ObtenerContenedoresCompartidosAsync(cancellationToken)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
-    public async Task<CatalogoResponse> CrearContenedorCompartidoAsync(CrearCatalogoRequest request, CancellationToken cancellationToken)
-    {
-        var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteContenedorCompartidoConNombreAsync(nombre, null, cancellationToken)) throw new ConflictoException("Ya existe un contenedor compartido con ese nombre.");
-        var contenedor = new ContenedorCompartido(nombre); await repository.AgregarContenedorCompartidoAsync(contenedor, cancellationToken); await repository.GuardarCambiosAsync(cancellationToken); return new(contenedor.Id, contenedor.Nombre);
-    }
-    public async Task<CatalogoResponse> ActualizarContenedorCompartidoAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken cancellationToken)
-    {
-        var contenedor = await ObtenerContenedorRequeridoAsync(id, cancellationToken); var nombre = ValidarNombre(request.Nombre);
-        if (await repository.ExisteContenedorCompartidoConNombreAsync(nombre, id, cancellationToken)) throw new ConflictoException("Ya existe un contenedor compartido con ese nombre.");
-        contenedor.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(cancellationToken); return new(contenedor.Id, contenedor.Nombre);
-    }
-    public async Task EliminarContenedorCompartidoAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var contenedor = await ObtenerContenedorRequeridoAsync(id, cancellationToken);
-        if (await repository.ContenedorCompartidoEstaEnUsoAsync(id, cancellationToken)) throw new ConflictoException("No se puede eliminar el contenedor porque está asociado a compras recibidas.");
-        repository.EliminarContenedorCompartido(contenedor); await repository.GuardarCambiosAsync(cancellationToken);
-    }
-
-    private static string ValidarNombre(string? nombre)
-    {
-        if (string.IsNullOrWhiteSpace(nombre)) throw new ValidacionException(new Dictionary<string, string[]> { ["nombre"] = ["El nombre es obligatorio."] });
-        nombre = nombre.Trim();
-        if (nombre.Length > 200) throw new ValidacionException(new Dictionary<string, string[]> { ["nombre"] = ["El nombre no puede exceder 200 caracteres."] });
-        return nombre;
-    }
-    private async Task<Empresa> ObtenerEmpresaRequeridaAsync(Guid id, CancellationToken ct) => await repository.ObtenerEmpresaAsync(id, ct) ?? throw new RecursoNoEncontradoException("la empresa", id);
-    private async Task<MarcaBulto> ObtenerMarcaRequeridaAsync(Guid id, CancellationToken ct) => await repository.ObtenerMarcaBultoAsync(id, ct) ?? throw new RecursoNoEncontradoException("la marca de bulto", id);
-    private async Task<ContenedorCompartido> ObtenerContenedorRequeridoAsync(Guid id, CancellationToken ct) => await repository.ObtenerContenedorCompartidoAsync(id, ct) ?? throw new RecursoNoEncontradoException("el contenedor compartido", id);
+    public async Task EliminarEmpresaAsync(Guid id, CancellationToken ct) { var empresa = await ObtenerEmpresaRequeridaAsync(id, ct); if (await repository.EmpresaEstaEnUsoAsync(id, ct)) throw new ConflictoException("No se puede eliminar la empresa porque estÃƒÂ¡ asociada a compras recibidas."); repository.EliminarEmpresa(empresa); await repository.GuardarCambiosAsync(ct); }
+    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerAduanasAsync(CancellationToken ct) => (await repository.ObtenerAduanasAsync(ct)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
+    public async Task<CatalogoResponse> CrearAduanaAsync(CrearCatalogoRequest request, CancellationToken ct) { var nombre = ValidarNombre(request.Nombre); if (await repository.ExisteAduanaConNombreAsync(nombre, null, ct)) throw new ConflictoException("Ya existe una aduana con ese nombre."); var aduana = new Aduana(nombre); await repository.AgregarAduanaAsync(aduana, ct); await repository.GuardarCambiosAsync(ct); return new(aduana.Id, aduana.Nombre); }
+    public async Task<CatalogoResponse> ActualizarAduanaAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken ct) { var aduana = await repository.ObtenerAduanaAsync(id, ct) ?? throw new RecursoNoEncontradoException("la aduana", id); var nombre = ValidarNombre(request.Nombre); if (await repository.ExisteAduanaConNombreAsync(nombre, id, ct)) throw new ConflictoException("Ya existe una aduana con ese nombre."); aduana.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(ct); return new(aduana.Id, aduana.Nombre); }
+    public async Task EliminarAduanaAsync(Guid id, CancellationToken ct) { var aduana = await repository.ObtenerAduanaAsync(id, ct) ?? throw new RecursoNoEncontradoException("la aduana", id); repository.EliminarAduana(aduana); await repository.GuardarCambiosAsync(ct); }
+    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerPuertosLlegadaAsync(CancellationToken ct) => (await repository.ObtenerPuertosLlegadaAsync(ct)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
+    public async Task<CatalogoResponse> CrearPuertoLlegadaAsync(CrearCatalogoRequest request, CancellationToken ct) { var nombre = ValidarNombre(request.Nombre); if (await repository.ExistePuertoLlegadaConNombreAsync(nombre, null, ct)) throw new ConflictoException("Ya existe un puerto con ese nombre."); var puerto = new PuertoLlegada(nombre); await repository.AgregarPuertoLlegadaAsync(puerto, ct); await repository.GuardarCambiosAsync(ct); return new(puerto.Id, puerto.Nombre); }
+    public async Task<CatalogoResponse> ActualizarPuertoLlegadaAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken ct) { var puerto = await repository.ObtenerPuertoLlegadaAsync(id, ct) ?? throw new RecursoNoEncontradoException("el puerto", id); var nombre = ValidarNombre(request.Nombre); if (await repository.ExistePuertoLlegadaConNombreAsync(nombre, id, ct)) throw new ConflictoException("Ya existe un puerto con ese nombre."); puerto.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(ct); return new(puerto.Id, puerto.Nombre); }
+    public async Task EliminarPuertoLlegadaAsync(Guid id, CancellationToken ct) { var puerto = await repository.ObtenerPuertoLlegadaAsync(id, ct) ?? throw new RecursoNoEncontradoException("el puerto", id); repository.EliminarPuertoLlegada(puerto); await repository.GuardarCambiosAsync(ct); }
+    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerMarcasBultoAsync(CancellationToken ct) => (await repository.ObtenerMarcasBultoAsync(ct)).Select(x => new CatalogoResponse(x.Id, x.Nombre)).ToArray();
+    public async Task<CatalogoResponse> CrearMarcaBultoAsync(CrearCatalogoRequest request, CancellationToken ct) { var nombre=ValidarNombre(request.Nombre); if(await repository.ExisteMarcaBultoConNombreAsync(nombre,null,ct)) throw new ConflictoException("Ya existe una marca de bulto con ese nombre."); var marca=new MarcaBulto(nombre); await repository.AgregarMarcaBultoAsync(marca,ct); await repository.GuardarCambiosAsync(ct); return new(marca.Id,marca.Nombre); }
+    public async Task<CatalogoResponse> ActualizarMarcaBultoAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken ct) { var marca=await ObtenerMarcaRequeridaAsync(id,ct); var nombre=ValidarNombre(request.Nombre); if(await repository.ExisteMarcaBultoConNombreAsync(nombre,id,ct)) throw new ConflictoException("Ya existe una marca de bulto con ese nombre."); marca.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(ct); return new(marca.Id,marca.Nombre); }
+    public async Task EliminarMarcaBultoAsync(Guid id, CancellationToken ct) { var marca=await ObtenerMarcaRequeridaAsync(id,ct); if(await repository.MarcaBultoEstaEnUsoAsync(id,ct)) throw new ConflictoException("No se puede eliminar la marca porque estÃƒÂ¡ asociada a compras recibidas."); repository.EliminarMarcaBulto(marca); await repository.GuardarCambiosAsync(ct); }
+    public async Task<IReadOnlyList<CatalogoResponse>> ObtenerContenedoresCompartidosAsync(CancellationToken ct) => (await repository.ObtenerContenedoresCompartidosAsync(ct)).Select(x => new CatalogoResponse(x.Id,x.Nombre)).ToArray();
+    public async Task<CatalogoResponse> CrearContenedorCompartidoAsync(CrearCatalogoRequest request, CancellationToken ct) { var nombre=ValidarNombre(request.Nombre); if(await repository.ExisteContenedorCompartidoConNombreAsync(nombre,null,ct)) throw new ConflictoException("Ya existe un contenedor compartido con ese nombre."); var contenedor=new ContenedorCompartido(nombre); await repository.AgregarContenedorCompartidoAsync(contenedor,ct); await repository.GuardarCambiosAsync(ct); return new(contenedor.Id,contenedor.Nombre); }
+    public async Task<CatalogoResponse> ActualizarContenedorCompartidoAsync(Guid id, ActualizarCatalogoRequest request, CancellationToken ct) { var contenedor=await ObtenerContenedorRequeridoAsync(id,ct); var nombre=ValidarNombre(request.Nombre); if(await repository.ExisteContenedorCompartidoConNombreAsync(nombre,id,ct)) throw new ConflictoException("Ya existe un contenedor compartido con ese nombre."); contenedor.ActualizarNombre(nombre); await repository.GuardarCambiosAsync(ct); return new(contenedor.Id,contenedor.Nombre); }
+    public async Task EliminarContenedorCompartidoAsync(Guid id, CancellationToken ct) { var contenedor=await ObtenerContenedorRequeridoAsync(id,ct); if(await repository.ContenedorCompartidoEstaEnUsoAsync(id,ct)) throw new ConflictoException("No se puede eliminar el contenedor porque estÃƒÂ¡ asociado a compras recibidas."); repository.EliminarContenedorCompartido(contenedor); await repository.GuardarCambiosAsync(ct); }
+    private static string ValidarNombre(string? nombre) { if(string.IsNullOrWhiteSpace(nombre)||nombre.Trim().Length>200) throw new ValidacionException(new Dictionary<string,string[]> { ["nombre"]=["El nombre es obligatorio y debe tener un maximo de 200 caracteres."]}); return nombre.Trim(); }
+    private static string NormalizarRif(string? rif) { var valor=rif?.Trim().ToUpperInvariant().Replace(" ",string.Empty).Replace("-",string.Empty) ?? string.Empty; if(!RifValido().IsMatch(valor)) throw new ValidacionException(new Dictionary<string,string[]> { ["rif"]=["El RIF es obligatorio y debe tener formato J123456789, V123456789, E123456789, G123456789 o P123456789."]}); return valor; }
+    [GeneratedRegex("^[JVEGP][0-9]{8,10}$")]
+    private static partial Regex RifValido();
+    private async Task<Empresa> ObtenerEmpresaRequeridaAsync(Guid id,CancellationToken ct)=>await repository.ObtenerEmpresaAsync(id,ct)??throw new RecursoNoEncontradoException("la empresa",id);
+    private async Task<MarcaBulto> ObtenerMarcaRequeridaAsync(Guid id,CancellationToken ct)=>await repository.ObtenerMarcaBultoAsync(id,ct)??throw new RecursoNoEncontradoException("la marca de bulto",id);
+    private async Task<ContenedorCompartido> ObtenerContenedorRequeridoAsync(Guid id,CancellationToken ct)=>await repository.ObtenerContenedorCompartidoAsync(id,ct)??throw new RecursoNoEncontradoException("el contenedor compartido",id);
 }

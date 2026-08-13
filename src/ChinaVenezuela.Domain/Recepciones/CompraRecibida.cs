@@ -1,4 +1,5 @@
-using ChinaVenezuela.Domain.Catalogos;
+﻿using ChinaVenezuela.Domain.Catalogos;
+using ChinaVenezuela.Domain.Usuarios;
 
 namespace ChinaVenezuela.Domain.Recepciones;
 
@@ -6,7 +7,19 @@ public sealed class CompraRecibida
 {
     private CompraRecibida() { }
 
-    public CompraRecibida(Guid? contenedorCompartidoId, string nombreContenedor, string numeroContenedor, Guid empresaId, string? descripcion, DateOnly fechaSalida, DateOnly? fechaLlegada, string? aduana, string puertoLlegada, Guid? marcaBultoId, DateTimeOffset fechaCreacionUtc)
+    public CompraRecibida(
+        Guid? contenedorCompartidoId,
+        string nombreContenedor,
+        string numeroContenedor,
+        Guid empresaId,
+        string? descripcion,
+        DateOnly fechaSalida,
+        DateOnly? fechaLlegada,
+        string? aduana,
+        string puertoLlegada,
+        Guid? marcaBultoId,
+        string receptorCodigoUsuario,
+        DateTimeOffset fechaCreacionUtc)
     {
         Id = Guid.NewGuid();
         ContenedorCompartidoId = contenedorCompartidoId;
@@ -19,6 +32,7 @@ public sealed class CompraRecibida
         Aduana = aduana;
         PuertoLlegada = puertoLlegada;
         MarcaBultoId = marcaBultoId;
+        ReceptorCodigoUsuario = receptorCodigoUsuario;
         FechaCreacionUtc = fechaCreacionUtc;
     }
 
@@ -36,10 +50,24 @@ public sealed class CompraRecibida
     public string PuertoLlegada { get; private set; } = null!;
     public Guid? MarcaBultoId { get; private set; }
     public MarcaBulto? MarcaBulto { get; private set; }
+    public string? ReceptorCodigoUsuario { get; private set; }
+    public Usuario? Receptor { get; private set; }
     public DateTimeOffset FechaCreacionUtc { get; private set; }
     public DateTimeOffset? FechaActualizacionUtc { get; private set; }
 
-    public void Actualizar(Guid? contenedorCompartidoId, string nombreContenedor, string numeroContenedor, Guid empresaId, string? descripcion, DateOnly fechaSalida, DateOnly? fechaLlegada, string? aduana, string puertoLlegada, Guid? marcaBultoId, DateTimeOffset fechaActualizacionUtc)
+    public void Actualizar(
+        Guid? contenedorCompartidoId,
+        string nombreContenedor,
+        string numeroContenedor,
+        Guid empresaId,
+        string? descripcion,
+        DateOnly fechaSalida,
+        DateOnly? fechaLlegada,
+        string? aduana,
+        string puertoLlegada,
+        Guid? marcaBultoId,
+        string receptorCodigoUsuario,
+        DateTimeOffset fechaActualizacionUtc)
     {
         ContenedorCompartidoId = contenedorCompartidoId;
         NombreContenedor = nombreContenedor;
@@ -51,6 +79,7 @@ public sealed class CompraRecibida
         Aduana = aduana;
         PuertoLlegada = puertoLlegada;
         MarcaBultoId = marcaBultoId;
+        ReceptorCodigoUsuario = receptorCodigoUsuario;
         FechaActualizacionUtc = fechaActualizacionUtc;
     }
 }

@@ -4,26 +4,10 @@ namespace ChinaVenezuela.Application.Catalogos.Interfaces;
 
 public interface ICatalogoRepository
 {
-    Task<IReadOnlyList<Empresa>> ObtenerEmpresasAsync(CancellationToken cancellationToken);
-    Task<Empresa?> ObtenerEmpresaAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> ExisteEmpresaConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken);
-    Task AgregarEmpresaAsync(Empresa empresa, CancellationToken cancellationToken);
-    void EliminarEmpresa(Empresa empresa);
-    Task<bool> EmpresaEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
-
-    Task<IReadOnlyList<MarcaBulto>> ObtenerMarcasBultoAsync(CancellationToken cancellationToken);
-    Task<MarcaBulto?> ObtenerMarcaBultoAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> ExisteMarcaBultoConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken);
-    Task AgregarMarcaBultoAsync(MarcaBulto marcaBulto, CancellationToken cancellationToken);
-    void EliminarMarcaBulto(MarcaBulto marcaBulto);
-    Task<bool> MarcaBultoEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
-
-    Task<IReadOnlyList<ContenedorCompartido>> ObtenerContenedoresCompartidosAsync(CancellationToken cancellationToken);
-    Task<ContenedorCompartido?> ObtenerContenedorCompartidoAsync(Guid id, CancellationToken cancellationToken);
-    Task<bool> ExisteContenedorCompartidoConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken);
-    Task AgregarContenedorCompartidoAsync(ContenedorCompartido contenedorCompartido, CancellationToken cancellationToken);
-    void EliminarContenedorCompartido(ContenedorCompartido contenedorCompartido);
-    Task<bool> ContenedorCompartidoEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
-
+    Task<IReadOnlyList<Empresa>> ObtenerEmpresasAsync(CancellationToken cancellationToken); Task<Empresa?> ObtenerEmpresaAsync(Guid id, CancellationToken cancellationToken); Task<bool> ExisteEmpresaConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken); Task<bool> ExisteEmpresaConRifAsync(string rif, Guid? excluirId, CancellationToken cancellationToken); Task AgregarEmpresaAsync(Empresa empresa, CancellationToken cancellationToken); void EliminarEmpresa(Empresa empresa); Task<bool> EmpresaEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<MarcaBulto>> ObtenerMarcasBultoAsync(CancellationToken cancellationToken); Task<MarcaBulto?> ObtenerMarcaBultoAsync(Guid id, CancellationToken cancellationToken); Task<bool> ExisteMarcaBultoConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken); Task AgregarMarcaBultoAsync(MarcaBulto marcaBulto, CancellationToken cancellationToken); void EliminarMarcaBulto(MarcaBulto marcaBulto); Task<bool> MarcaBultoEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ContenedorCompartido>> ObtenerContenedoresCompartidosAsync(CancellationToken cancellationToken); Task<ContenedorCompartido?> ObtenerContenedorCompartidoAsync(Guid id, CancellationToken cancellationToken); Task<bool> ExisteContenedorCompartidoConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken); Task AgregarContenedorCompartidoAsync(ContenedorCompartido contenedorCompartido, CancellationToken cancellationToken); void EliminarContenedorCompartido(ContenedorCompartido contenedorCompartido); Task<bool> ContenedorCompartidoEstaEnUsoAsync(Guid id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Aduana>> ObtenerAduanasAsync(CancellationToken cancellationToken) => throw new NotSupportedException(); Task<Aduana?> ObtenerAduanaAsync(Guid id, CancellationToken cancellationToken) => throw new NotSupportedException(); Task<bool> ExisteAduanaConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken) => throw new NotSupportedException(); Task AgregarAduanaAsync(Aduana aduana, CancellationToken cancellationToken) => throw new NotSupportedException(); void EliminarAduana(Aduana aduana) => throw new NotSupportedException();
+    Task<IReadOnlyList<PuertoLlegada>> ObtenerPuertosLlegadaAsync(CancellationToken cancellationToken) => throw new NotSupportedException(); Task<PuertoLlegada?> ObtenerPuertoLlegadaAsync(Guid id, CancellationToken cancellationToken) => throw new NotSupportedException(); Task<bool> ExistePuertoLlegadaConNombreAsync(string nombre, Guid? excluirId, CancellationToken cancellationToken) => throw new NotSupportedException(); Task AgregarPuertoLlegadaAsync(PuertoLlegada puerto, CancellationToken cancellationToken) => throw new NotSupportedException(); void EliminarPuertoLlegada(PuertoLlegada puerto) => throw new NotSupportedException();
     Task GuardarCambiosAsync(CancellationToken cancellationToken);
 }

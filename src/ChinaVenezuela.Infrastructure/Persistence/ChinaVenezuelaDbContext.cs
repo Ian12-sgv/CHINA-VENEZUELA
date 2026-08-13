@@ -2,6 +2,7 @@ using System.Text.Json;
 using ChinaVenezuela.Domain.Auditoria;
 using ChinaVenezuela.Domain.Catalogos;
 using ChinaVenezuela.Domain.Recepciones;
+using ChinaVenezuela.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -13,7 +14,12 @@ public sealed class ChinaVenezuelaDbContext(DbContextOptions<ChinaVenezuelaDbCon
     public DbSet<ContenedorCompartido> ContenedoresCompartidos => Set<ContenedorCompartido>();
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<MarcaBulto> MarcasBultos => Set<MarcaBulto>();
+    public DbSet<Aduana> Aduanas => Set<Aduana>();
+    public DbSet<PuertoLlegada> PuertosLlegada => Set<PuertoLlegada>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<GrupoUsuario> GruposUsuario => Set<GrupoUsuario>();
+    public DbSet<Grupo> Grupos => Set<Grupo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChinaVenezuelaDbContext).Assembly);
 

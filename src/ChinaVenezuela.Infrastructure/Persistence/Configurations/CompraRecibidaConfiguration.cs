@@ -1,4 +1,4 @@
-using ChinaVenezuela.Domain.Recepciones;
+﻿using ChinaVenezuela.Domain.Recepciones;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,14 +21,17 @@ public sealed class CompraRecibidaConfiguration : IEntityTypeConfiguration<Compr
         builder.Property(x => x.Aduana).HasColumnName("aduana").HasMaxLength(200);
         builder.Property(x => x.PuertoLlegada).HasColumnName("puerto_llegada").HasMaxLength(200).IsRequired();
         builder.Property(x => x.MarcaBultoId).HasColumnName("marca_bulto_id");
+        builder.Property(x => x.ReceptorCodigoUsuario).HasColumnName("receptor_codigo_usuario").HasMaxLength(50);
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone").IsRequired();
         builder.Property(x => x.FechaActualizacionUtc).HasColumnName("fecha_actualizacion_utc").HasColumnType("timestamp with time zone");
         builder.HasOne(x => x.ContenedorCompartido).WithMany().HasForeignKey(x => x.ContenedorCompartidoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.MarcaBulto).WithMany().HasForeignKey(x => x.MarcaBultoId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Receptor).WithMany().HasForeignKey(x => x.ReceptorCodigoUsuario).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.NumeroContenedor).HasDatabaseName("ix_compra_recibida_numero_contenedor");
         builder.HasIndex(x => x.ContenedorCompartidoId).HasDatabaseName("ix_compra_recibida_contenedor_compartido_id");
         builder.HasIndex(x => x.EmpresaId).HasDatabaseName("ix_compra_recibida_empresa_id");
         builder.HasIndex(x => x.MarcaBultoId).HasDatabaseName("ix_compra_recibida_marca_bulto_id");
+        builder.HasIndex(x => x.ReceptorCodigoUsuario).HasDatabaseName("ix_compra_recibida_receptor_codigo_usuario");
     }
 }
