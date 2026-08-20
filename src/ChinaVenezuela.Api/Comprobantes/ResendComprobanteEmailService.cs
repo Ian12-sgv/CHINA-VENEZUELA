@@ -1,5 +1,6 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 using Microsoft.Extensions.Options;
@@ -14,29 +15,37 @@ public sealed class ResendComprobanteEmailService(
     public async Task<ComprobanteEnviadoResponse> EnviarAsync(EnvioComprobanteRequest request, CancellationToken cancellationToken)
     {
         var configuration = options.Value;
-        if (string.IsNullOrWhiteSpace(configuration.ApiKey) || string.IsNullOrWhiteSpace(configuration.RemitenteCorreo))
-            throw new ValidacionException(new Dictionary<string, string[]>
-            {
-                ["resend"] = ["El envio automatico no esta configurado. Faltan las variables Resend__ApiKey y Resend__RemitenteCorreo en el servidor."]
-            });
+        ValidarConfiguracion(configuration, "El envio automatico no esta configurado. Faltan las variables Resend__ApiKey y Resend__RemitenteCorreo en el servidor.");
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, "emails");
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", configuration.ApiKey);
-        message.Content = JsonContent.Create(new ResendEmailRequest(
+        using var message = CrearMensaje(configuration, new ResendEmailRequest(
             $"{configuration.RemitenteNombre ?? "China - Venezuela"} <{configuration.RemitenteCorreo}>",
             [request.CorreoReceptor],
             [request.CorreoRemitente],
             request.Asunto,
             request.ContenidoHtml));
-
         using var response = await httpClient.SendAsync(message, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-            throw new ValidacionException(new Dictionary<string, string[]>
-            {
-                ["resend"] = ["Resend no pudo enviar el comprobante. Verifica la clave API y el remitente de dominio verificado."]
-            });
-
+        ExigirEnvioCorrecto(response, "Resend no pudo enviar el comprobante. Verifica la clave API y el remitente de dominio verificado.");
         return new ComprobanteEnviadoResponse(request.CorreoReceptor, request.CorreoRemitente, timeProvider.GetUtcNow());
+    }
+
+    private static void ValidarConfiguracion(ResendOptions configuration, string mensaje)
+    {
+        if (string.IsNullOrWhiteSpace(configuration.ApiKey) || string.IsNullOrWhiteSpace(configuration.RemitenteCorreo))
+            throw new ValidacionException(new Dictionary<string, string[]> { ["resend"] = [mensaje] });
+    }
+
+    private static HttpRequestMessage CrearMensaje(ResendOptions configuration, object contenido)
+    {
+        var message = new HttpRequestMessage(HttpMethod.Post, "emails");
+        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", configuration.ApiKey);
+        message.Content = JsonContent.Create(contenido);
+        return message;
+    }
+
+    private static void ExigirEnvioCorrecto(HttpResponseMessage response, string mensaje)
+    {
+        if (!response.IsSuccessStatusCode)
+            throw new ValidacionException(new Dictionary<string, string[]> { ["resend"] = [mensaje] });
     }
 
     private sealed record ResendEmailRequest(
@@ -45,4 +54,5 @@ public sealed class ResendComprobanteEmailService(
         [property: JsonPropertyName("cc")] IReadOnlyList<string> Cc,
         [property: JsonPropertyName("subject")] string Subject,
         [property: JsonPropertyName("html")] string Html);
+
 }

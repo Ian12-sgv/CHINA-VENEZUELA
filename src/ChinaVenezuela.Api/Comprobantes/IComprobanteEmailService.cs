@@ -1,4 +1,4 @@
-﻿namespace ChinaVenezuela.Api.Comprobantes;
+namespace ChinaVenezuela.Api.Comprobantes;
 
 public sealed record EnvioComprobanteRequest(
     string CorreoReceptor,

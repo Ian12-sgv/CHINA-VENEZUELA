@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Application.Recepciones.Exceptions;
+using ChinaVenezuela.Application.Recepciones.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +16,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsSer
             RecursoNoEncontradoPorNombreException notFound => new ProblemDetails { Status = StatusCodes.Status404NotFound, Title = "Recurso no encontrado", Detail = notFound.Message },
             ConflictoException conflict => new ProblemDetails { Status = StatusCodes.Status409Conflict, Title = "Conflicto de datos", Detail = conflict.Message },
             CredencialesInvalidasException invalidas => new ProblemDetails { Status = StatusCodes.Status401Unauthorized, Title = "Credenciales invalidas", Detail = invalidas.Message },
+            CorreoNoVerificadoException correo => new ProblemDetails { Status = StatusCodes.Status403Forbidden, Title = "Correo no verificado", Detail = correo.Message },
             _ => new ProblemDetails { Status = StatusCodes.Status500InternalServerError, Title = "Error interno del servidor" }
         };
         context.Response.StatusCode = details.Status!.Value;

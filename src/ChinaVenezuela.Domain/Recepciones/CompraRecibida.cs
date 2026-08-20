@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Domain.Catalogos;
+using ChinaVenezuela.Domain.Catalogos;
 using ChinaVenezuela.Domain.Usuarios;
 
 namespace ChinaVenezuela.Domain.Recepciones;
@@ -54,6 +54,9 @@ public sealed class CompraRecibida
     public Usuario? Receptor { get; private set; }
     public DateTimeOffset FechaCreacionUtc { get; private set; }
     public DateTimeOffset? FechaActualizacionUtc { get; private set; }
+    public DateTimeOffset? FechaComprobanteEnviadoUtc { get; private set; }
+
+    public void MarcarComprobanteEnviado(DateTimeOffset fechaEnvioUtc) => FechaComprobanteEnviadoUtc = fechaEnvioUtc;
 
     public void Actualizar(
         Guid? contenedorCompartidoId,

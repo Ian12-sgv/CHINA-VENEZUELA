@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Api.Auth;
+using ChinaVenezuela.Api.Auth;
 using ChinaVenezuela.Api.ExceptionHandling;
 using ChinaVenezuela.Api.Hubs;
 using ChinaVenezuela.Api.Comprobantes;
@@ -7,6 +7,8 @@ using ChinaVenezuela.Application.Catalogos.Services;
 using ChinaVenezuela.Application.Grupos.Interfaces;
 using ChinaVenezuela.Application.Grupos.Services;
 using ChinaVenezuela.Application.Recepciones.Interfaces;
+using ChinaVenezuela.Application.Pedidos.Interfaces;
+using ChinaVenezuela.Application.Pedidos.Services;
 using ChinaVenezuela.Application.Recepciones.Services;
 using ChinaVenezuela.Application.Usuarios.Interfaces;
 using ChinaVenezuela.Application.Usuarios.Services;
@@ -14,10 +16,12 @@ using ChinaVenezuela.Infrastructure.Catalogos;
 using ChinaVenezuela.Infrastructure.Grupos;
 using ChinaVenezuela.Infrastructure.Persistence;
 using ChinaVenezuela.Infrastructure.Recepciones;
+using ChinaVenezuela.Infrastructure.Pedidos;
 using ChinaVenezuela.Infrastructure.Usuarios;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("PostgreSql") ?? throw new InvalidOperationException("La cadena de conexion 'PostgreSql' es obligatoria.");
@@ -45,13 +49,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
-builder.Services.AddAuthorization(options => options.AddPolicy("GestionGrupos", policy => policy.RequireAuthenticatedUser().RequireAssertion(context => context.User.HasClaim("codigo_usuario", "MS") || context.User.HasClaim("codigo_usuario", "SIS"))));
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("GestionGrupos", policy => policy.RequireAuthenticatedUser().RequireAssertion(context =>
+        context.User.HasClaim("codigo_usuario", "MS") || context.User.HasClaim("codigo_usuario", "SIS")));
+    options.AddPolicy("AccesoCompras", policy => policy.RequireAuthenticatedUser().RequireAssertion(context =>
+        context.User.HasClaim("codigo_usuario", "MS") || context.User.HasClaim("codigo_usuario", "SIS") ||
+        context.User.FindAll(ClaimTypes.Role).Any(claim => string.Equals(claim.Value, "oficina", StringComparison.OrdinalIgnoreCase))));
+    options.AddPolicy("AccesoPedidos", policy => policy.RequireAuthenticatedUser().RequireAssertion(context =>
+        context.User.HasClaim("codigo_usuario", "MS") || context.User.HasClaim("codigo_usuario", "SIS") ||
+        context.User.FindAll(ClaimTypes.Role).Any(claim => string.Equals(claim.Value, "Pedidos", StringComparison.OrdinalIgnoreCase))));
+    options.AddPolicy("AccesoOperativo", policy => policy.RequireAuthenticatedUser().RequireAssertion(context =>
+        context.User.HasClaim("codigo_usuario", "MS") || context.User.HasClaim("codigo_usuario", "SIS") ||
+        context.User.FindAll(ClaimTypes.Role).Any(claim => string.Equals(claim.Value, "oficina", StringComparison.OrdinalIgnoreCase) || string.Equals(claim.Value, "Pedidos", StringComparison.OrdinalIgnoreCase))));
+});
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection(ResendOptions.SectionName));
+builder.Services.Configure<ImagenesOptions>(builder.Configuration.GetSection(ImagenesOptions.SectionName));
 builder.Services.AddHttpClient<IComprobanteEmailService, ResendComprobanteEmailService>(client => client.BaseAddress = new Uri("https://api.resend.com/"));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddDbContext<ChinaVenezuelaDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<ICompraRecibidaRepository, CompraRecibidaRepository>();
+builder.Services.AddScoped<IPedidosRepository, PedidosRepository>();
+builder.Services.AddSingleton<IAlmacenamientoImagenes, AlmacenamientoImagenesLocal>();
+builder.Services.AddScoped<IPedidosService, PedidosService>();
 builder.Services.AddScoped<ICompraRecibidaService, CompraRecibidaService>();
 builder.Services.AddScoped<ICatalogoRepository, CatalogoRepository>();
 builder.Services.AddScoped<ICatalogoService, CatalogoService>();

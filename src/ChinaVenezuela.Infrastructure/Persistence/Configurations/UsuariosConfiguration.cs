@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Domain.Usuarios;
+using ChinaVenezuela.Domain.Usuarios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +16,9 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(x => x.Nombre).HasColumnName("nombre").HasMaxLength(200).IsRequired();
         builder.Property(x => x.ContrasenaHash).HasColumnName("contrasena_hash").HasMaxLength(500).IsRequired();
         builder.Property(x => x.Correo).HasColumnName("correo").HasMaxLength(254);
+        builder.Property(x => x.CorreoVerificado).HasColumnName("correo_verificado").HasDefaultValue(true).IsRequired();
+        builder.Property(x => x.TokenVerificacionHash).HasColumnName("token_verificacion_hash").HasMaxLength(128);
+        builder.Property(x => x.TokenVerificacionExpiraUtc).HasColumnName("token_verificacion_expira_utc");
         builder.Property(x => x.Status).HasColumnName("status").HasDefaultValue(true).IsRequired();
 
         builder.HasData(new Usuario(

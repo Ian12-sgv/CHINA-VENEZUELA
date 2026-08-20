@@ -185,6 +185,194 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                     b.ToTable("puerto_llegada", (string)null);
                 });
 
+            modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.ProductoPedido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("categoria");
+
+                    b.Property<string>("CodigoBarra")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("codigo_barra");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("color");
+
+                    b.Property<decimal>("Costo")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("costo");
+
+                    b.Property<string>("CreadoPorCodigoUsuario")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("creado_por_codigo_usuario");
+
+                    b.Property<bool>("Enviado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("enviado");
+
+                    b.Property<string>("Fabricante")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("fabricante");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaEnvioUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_envio_utc");
+
+                    b.Property<DateOnly>("FechaPedido")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("date")
+                        .HasColumnName("fecha_pedido")
+                        .HasDefaultValueSql("CURRENT_DATE");
+
+                    b.Property<string>("Marca")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("marca");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("nombre");
+
+                    b.Property<decimal>("PrecioDetal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("precio_detal");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("referencia");
+
+                    b.Property<string>("Talla")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("talla");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodigoBarra")
+                        .IsUnique();
+
+                    b.ToTable("producto_pedido", (string)null);
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.ProductoPedidoImagen", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClaveAlmacenamiento")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("clave_almacenamiento");
+
+                    b.Property<DateTimeOffset?>("FechaActualizacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_actualizacion_utc");
+
+                    b.Property<DateTimeOffset>("FechaCreacionUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_creacion_utc");
+
+                    b.Property<string>("NombreOriginal")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("nombre_original");
+
+                    b.Property<Guid>("ProductoPedidoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("producto_pedido_id");
+
+                    b.Property<long>("TamanoBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tamano_bytes");
+
+                    b.Property<string>("TipoContenido")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tipo_contenido");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductoPedidoId")
+                        .IsUnique();
+
+                    b.ToTable("producto_pedido_imagen", (string)null);
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.RegistroPrecioPedido", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodigoBarra")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("codigo_barra");
+
+                    b.Property<decimal>("PrecioSistema")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("precio_sistema");
+
+                    b.Property<decimal>("PrecioVerificado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("precio_verificado");
+
+                    b.Property<string>("Producto")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("producto");
+
+                    b.Property<string>("Sucursal")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("sucursal");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("registro_precio_pedido", (string)null);
+                });
+
             modelBuilder.Entity("ChinaVenezuela.Domain.Recepciones.CompraRecibida", b =>
                 {
                     b.Property<Guid>("Id")
@@ -213,6 +401,10 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("FechaActualizacionUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_actualizacion_utc");
+
+                    b.Property<DateTimeOffset?>("FechaComprobanteEnviadoUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha_comprobante_enviado_utc");
 
                     b.Property<DateTimeOffset>("FechaCreacionUtc")
                         .HasColumnType("timestamp with time zone")
@@ -333,6 +525,12 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("correo");
 
+                    b.Property<bool>("CorreoVerificado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("correo_verificado");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -344,6 +542,15 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("TokenVerificacionExpiraUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("token_verificacion_expira_utc");
+
+                    b.Property<string>("TokenVerificacionHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("token_verificacion_hash");
 
                     b.HasKey("CodigoUsuario");
 
@@ -363,9 +570,19 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         {
                             CodigoUsuario = "MARTHA",
                             ContrasenaHash = "PBKDF2-SHA256$600000$/ArqC9UVvmvFUXd6R3AnLw==$7LqpJF/sNGKbmYt60NGHe4RBjujsh04P8DkWFUvBVWI=",
+                            CorreoVerificado = true,
                             Nombre = "Martha",
                             Status = true
                         });
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.ProductoPedidoImagen", b =>
+                {
+                    b.HasOne("ChinaVenezuela.Domain.Pedidos.ProductoPedido", null)
+                        .WithOne("Imagen")
+                        .HasForeignKey("ChinaVenezuela.Domain.Pedidos.ProductoPedidoImagen", "ProductoPedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ChinaVenezuela.Domain.Recepciones.CompraRecibida", b =>
@@ -409,6 +626,11 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.ProductoPedido", b =>
+                {
+                    b.Navigation("Imagen");
                 });
 
             modelBuilder.Entity("ChinaVenezuela.Domain.Usuarios.Usuario", b =>

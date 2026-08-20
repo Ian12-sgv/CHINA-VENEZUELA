@@ -19,3 +19,9 @@ backend-publicar*/
 *.log
 *.rar
 *.log.err
+
+datos/imagenes/
+
+# Auxiliary source and generated database scripts
+/adolfo/
+/actualizar-base-servidor.sql

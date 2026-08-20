@@ -1,4 +1,4 @@
-﻿namespace ChinaVenezuela.Application.Recepciones.Contracts;
+namespace ChinaVenezuela.Application.Recepciones.Contracts;
 
 public sealed record CrearCompraRecibidaRequest(
     Guid? ContenedorCompartidoId,
@@ -42,6 +42,7 @@ public sealed record CompraRecibidaResponse(
     string? ReceptorNombre,
     string? ReceptorCorreo,
     DateTimeOffset FechaCreacionUtc,
-    DateTimeOffset? FechaActualizacionUtc);
+    DateTimeOffset? FechaActualizacionUtc,
+    DateTimeOffset? FechaComprobanteEnviadoUtc);
 
 

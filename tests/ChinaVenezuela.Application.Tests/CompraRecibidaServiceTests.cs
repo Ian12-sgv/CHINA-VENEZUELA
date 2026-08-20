@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Application.Catalogos.Interfaces;
+using ChinaVenezuela.Application.Catalogos.Interfaces;
 using ChinaVenezuela.Application.Recepciones.Contracts;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 using ChinaVenezuela.Application.Recepciones.Interfaces;
@@ -62,12 +62,16 @@ public sealed class CompraRecibidaServiceTests
         public Task<int> ContarPorNombreAsync(string nombre, CancellationToken ct) => Task.FromResult(nombre == receptor.Nombre ? 1 : 0);
         public Task<Usuario?> ObtenerPorNombreAsync(string nombre, CancellationToken ct) => Task.FromResult<Usuario?>(nombre == receptor.Nombre ? receptor : null);
         public Task<Usuario?> ObtenerPorCodigoAsync(string codigoUsuario, CancellationToken ct) => Task.FromResult<Usuario?>(codigoUsuario == receptor.CodigoUsuario ? receptor : null);
+        public Task<Usuario?> ObtenerPorCorreoAsync(string correo, CancellationToken ct) => Task.FromResult<Usuario?>(null);
+        public Task<Usuario?> ObtenerPorTokenVerificacionHashAsync(string tokenHash, CancellationToken ct) => Task.FromResult<Usuario?>(null);
         public Task<IReadOnlyList<Usuario>> ObtenerTodosAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<Usuario>>([receptor]);
         public Task<IReadOnlyList<string>> ObtenerNombresGruposAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<string>>([]);
         public Task AgregarAsync(Usuario usuario, CancellationToken ct) => Task.CompletedTask;
         public Task ReemplazarGruposAsync(string codigoUsuario, IReadOnlyCollection<string> grupos, CancellationToken ct) => Task.CompletedTask;
         public Task ActualizarAsync(string codigoUsuario, string nombre, string? correo, string contrasenaHash, bool status, IReadOnlyCollection<string> grupos, CancellationToken ct) => Task.CompletedTask;
         public Task EliminarAsync(string codigoUsuario, CancellationToken ct) => Task.CompletedTask;
+        public Task GuardarAsync(Usuario usuario, CancellationToken ct) => Task.CompletedTask;
+        public Task MarcarCorreoPendienteAsync(string codigoUsuario, string tokenHash, DateTimeOffset expiraUtc, CancellationToken ct) => Task.CompletedTask;
     }
     private sealed class RepositorioCatalogosEnMemoria : ICatalogoRepository
     {

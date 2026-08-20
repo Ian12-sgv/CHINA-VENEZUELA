@@ -1,11 +1,10 @@
-﻿import type {
+import type {
   Catalogo,
   CatalogoTipo,
   CompraRecibida,
   CompraRecibidaRequest,
   InicioSesionResponse,
   IniciarSesionRequest,
-  RegistrarUsuarioRequest,
   UsuarioSesion,
   Grupo,
   UsuarioAdministrable,
@@ -13,6 +12,12 @@
   EmpresaRequest,
   CrearUsuarioAdministrativoRequest,
   ActualizarUsuarioAdministrativoRequest,
+  ProductoPedido,
+  CrearProductoPedidoRequest,
+  ActualizarProductoPedidoRequest,
+  RegistroPrecioPedido,
+  PaginaProductosPedido,
+  CuentaUsuario,
 } from './types'
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '/api'
@@ -41,15 +46,34 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init?.headers },
   })
   if (response.ok) return response.status === 204 ? (undefined as T) : (await response.json() as T)
+  if (response.status === 401) { limpiarSesion(); window.dispatchEvent(new Event('sesion-invalida')) }
   const problem = await response.json().catch(() => ({})) as ProblemDetails
   const validation = problem.errors ? Object.values(problem.errors).flat().join(' ') : ''
   throw new Error(validation || problem.detail || problem.title || 'No fue posible completar la operacion.')
 }
 
+async function requestMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const token = getAccessToken()
+  const response = await fetch(`${apiBaseUrl}${path}`, { method: 'PUT', body: formData, headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+  if (response.ok) return await response.json() as T
+  const problem = await response.json().catch(() => ({})) as ProblemDetails
+  const validation = problem.errors ? Object.values(problem.errors).flat().join(' ') : ''
+  throw new Error(validation || problem.detail || problem.title || 'No fue posible cargar la imagen.')
+}
+
+async function obtenerImagen(path: string): Promise<string | null> {
+  const token = getAccessToken()
+  const response = await fetch(`${apiBaseUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error('No fue posible cargar la imagen.')
+  return URL.createObjectURL(await response.blob())
+}
 export const authApi = {
-  grupos: () => request<string[]>('/auth/grupos'),
-  registrar: (data: RegistrarUsuarioRequest) => request<UsuarioSesion>('/auth/registrar', { method: 'POST', body: JSON.stringify(data) }),
   iniciarSesion: (data: IniciarSesionRequest) => request<InicioSesionResponse>('/auth/iniciar-sesion', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+export const cuentaApi = {
+  obtener: () => request<CuentaUsuario>('/cuenta')
 }
 
 export const gruposApi = {
@@ -91,3 +115,15 @@ export const catalogosApi = {
 }
 
 
+
+export const pedidosApi = {
+  productos: (pagina = 1, busqueda = '', fechaPedido = '', enviado?: boolean) => request<PaginaProductosPedido>(`/pedidos/productos?pagina=${pagina}&tamanoPagina=10${busqueda ? `&busqueda=${encodeURIComponent(busqueda)}` : ''}${fechaPedido ? `&fechaPedido=${fechaPedido}` : ''}${enviado === undefined ? '' : `&enviado=${enviado}`}`),
+  crearProducto: (data: CrearProductoPedidoRequest) => request<ProductoPedido>('/pedidos/productos', { method: 'POST', body: JSON.stringify(data) }),
+  actualizarProducto: (id: string, data: ActualizarProductoPedidoRequest) => request<ProductoPedido>(`/pedidos/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminarProducto: (id: string) => request<void>(`/pedidos/productos/${id}`, { method: 'DELETE' }),
+  enviarProducto: (id: string, receptorCodigoUsuario: string) => request<{ receptor: string; copia: string; enviadoEnUtc: string }>(`/pedidos/productos/${id}/enviar`, { method: 'POST', body: JSON.stringify({ receptorCodigoUsuario }) }),
+  subirImagen: (id: string, archivo: File) => { const data = new FormData(); data.append('imagen', archivo); return requestMultipart(`/pedidos/productos/${id}/imagen`, data) },
+  obtenerImagen: (id: string) => obtenerImagen(`/pedidos/productos/${id}/imagen`),
+  eliminarImagen: (id: string) => request<void>(`/pedidos/productos/${id}/imagen`, { method: 'DELETE' }),
+  registrosPrecios: () => request<RegistroPrecioPedido[]>('/pedidos/registros-precios'),
+}

@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Api.Hubs;
+using ChinaVenezuela.Api.Hubs;
 using ChinaVenezuela.Api.Comprobantes;
 using ChinaVenezuela.Application.Usuarios.Interfaces;
 using System.Text.Encodings.Web;
@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace ChinaVenezuela.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "AccesoCompras")]
 [Route("api/compras-recibidas")]
 [Produces("application/json")]
 public sealed class ComprasRecibidasController(ICompraRecibidaService service, IUsuarioRepository usuarios, IComprobanteEmailService comprobantes, IHubContext<ActualizacionesHub> hub) : ControllerBase
@@ -43,6 +43,8 @@ public sealed class ComprasRecibidasController(ICompraRecibidaService service, I
     public async Task<ActionResult<ComprobanteEnviadoResponse>> EnviarComprobante(Guid id, CancellationToken cancellationToken)
     {
         var compra = await service.ObtenerPorIdAsync(id, cancellationToken);
+        if (compra.FechaComprobanteEnviadoUtc is not null)
+            throw new ChinaVenezuela.Application.Recepciones.Exceptions.ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["El comprobante de esta compra ya fue enviado."] });
         var remitente = await usuarios.ObtenerPorCodigoAsync(CodigoSolicitante, cancellationToken);
         if (remitente is null || string.IsNullOrWhiteSpace(remitente.Correo))
             throw new ChinaVenezuela.Application.Recepciones.Exceptions.ValidacionException(new Dictionary<string, string[]> { ["correoRemitente"] = ["Tu usuario no tiene un correo registrado. Agregalo en Usuarios antes de enviar el comprobante."] });
@@ -56,6 +58,8 @@ public sealed class ComprasRecibidasController(ICompraRecibidaService service, I
             remitente.Nombre,
             $"Comprobante de compra - {compra.NumeroContenedor}",
             CrearHtmlComprobante(compra, remitente.Nombre)), cancellationToken);
+        await service.MarcarComprobanteEnviadoAsync(id, cancellationToken);
+        await hub.Clients.All.SendAsync(ActualizacionesHub.DatosActualizados, cancellationToken);
         return Ok(enviado);
     }
     [HttpPut("{id:guid}")]

@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Application.Usuarios.Interfaces;
+using ChinaVenezuela.Application.Usuarios.Interfaces;
 using ChinaVenezuela.Domain.Usuarios;
 using ChinaVenezuela.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +13,8 @@ public sealed class UsuarioRepository(ChinaVenezuelaDbContext dbContext) : IUsua
     public Task<int> ContarPorNombreAsync(string nombre, CancellationToken cancellationToken) => dbContext.Usuarios.CountAsync(usuario => usuario.Nombre.ToUpper() == nombre.ToUpper(), cancellationToken);
     public Task<Usuario?> ObtenerPorNombreAsync(string nombre, CancellationToken cancellationToken) => dbContext.Usuarios.Include(usuario => usuario.Grupos).FirstOrDefaultAsync(usuario => usuario.Nombre.ToUpper() == nombre.ToUpper(), cancellationToken);
     public Task<Usuario?> ObtenerPorCodigoAsync(string codigoUsuario, CancellationToken cancellationToken) => dbContext.Usuarios.AsNoTracking().FirstOrDefaultAsync(usuario => usuario.CodigoUsuario == codigoUsuario, cancellationToken);
+    public Task<Usuario?> ObtenerPorCorreoAsync(string correo, CancellationToken cancellationToken) => dbContext.Usuarios.Include(usuario => usuario.Grupos).FirstOrDefaultAsync(usuario => usuario.Correo != null && usuario.Correo.ToUpper() == correo.ToUpper(), cancellationToken);
+    public Task<Usuario?> ObtenerPorTokenVerificacionHashAsync(string tokenHash, CancellationToken cancellationToken) => dbContext.Usuarios.Include(usuario => usuario.Grupos).FirstOrDefaultAsync(usuario => usuario.TokenVerificacionHash == tokenHash, cancellationToken);
     public async Task<IReadOnlyList<Usuario>> ObtenerTodosAsync(CancellationToken cancellationToken) => await dbContext.Usuarios.Include(usuario => usuario.Grupos).OrderBy(usuario => usuario.Nombre).ToArrayAsync(cancellationToken);
     public async Task<IReadOnlyList<string>> ObtenerNombresGruposAsync(CancellationToken cancellationToken) => await dbContext.Grupos.Select(grupo => grupo.Nombre).Order().ToArrayAsync(cancellationToken);
 
@@ -41,7 +43,11 @@ public sealed class UsuarioRepository(ChinaVenezuelaDbContext dbContext) : IUsua
 
     public Task EliminarAsync(string codigoUsuario, CancellationToken cancellationToken) =>
         dbContext.Usuarios.Where(usuario => usuario.CodigoUsuario == codigoUsuario).ExecuteDeleteAsync(cancellationToken);
+    public Task GuardarAsync(Usuario usuario, CancellationToken cancellationToken) => dbContext.SaveChangesAsync(cancellationToken);
+
+    public Task MarcarCorreoPendienteAsync(string codigoUsuario, string tokenHash, DateTimeOffset expiraUtc, CancellationToken cancellationToken) =>
+        dbContext.Usuarios.Where(usuario => usuario.CodigoUsuario == codigoUsuario).ExecuteUpdateAsync(setters => setters
+            .SetProperty(usuario => usuario.CorreoVerificado, false)
+            .SetProperty(usuario => usuario.TokenVerificacionHash, tokenHash)
+            .SetProperty(usuario => usuario.TokenVerificacionExpiraUtc, expiraUtc), cancellationToken);
 }
-
-
-

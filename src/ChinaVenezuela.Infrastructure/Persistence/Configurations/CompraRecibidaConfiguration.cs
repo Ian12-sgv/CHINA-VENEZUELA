@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Domain.Recepciones;
+using ChinaVenezuela.Domain.Recepciones;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -24,6 +24,7 @@ public sealed class CompraRecibidaConfiguration : IEntityTypeConfiguration<Compr
         builder.Property(x => x.ReceptorCodigoUsuario).HasColumnName("receptor_codigo_usuario").HasMaxLength(50);
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone").IsRequired();
         builder.Property(x => x.FechaActualizacionUtc).HasColumnName("fecha_actualizacion_utc").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.FechaComprobanteEnviadoUtc).HasColumnName("fecha_comprobante_enviado_utc").HasColumnType("timestamp with time zone");
         builder.HasOne(x => x.ContenedorCompartido).WithMany().HasForeignKey(x => x.ContenedorCompartidoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.MarcaBulto).WithMany().HasForeignKey(x => x.MarcaBultoId).OnDelete(DeleteBehavior.Restrict);

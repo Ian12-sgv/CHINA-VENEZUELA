@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Application.Catalogos.Interfaces;
+using ChinaVenezuela.Application.Catalogos.Interfaces;
 using ChinaVenezuela.Application.Recepciones.Contracts;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 using ChinaVenezuela.Application.Recepciones.Interfaces;
@@ -32,6 +32,8 @@ public sealed class CompraRecibidaService(
         CompraRecibidaValidator.Validate(request);
         var receptor = await ValidarRelacionesAsync(codigoRemitente, request.EmpresaId, request.ContenedorCompartidoId, request.MarcaBultoId, request.ReceptorCodigoUsuario, cancellationToken);
         var compra = await FindAsync(id, cancellationToken);
+        if (compra.FechaComprobanteEnviadoUtc is not null)
+            throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["Una compra con comprobante enviado no puede editarse."] });
         compra.Actualizar(request.ContenedorCompartidoId, Required(request.NombreContenedor), Required(request.NumeroContenedor), request.EmpresaId, Optional(request.Descripcion), request.FechaSalida, request.FechaLlegada, Optional(request.Aduana), Required(request.PuertoLlegada), request.MarcaBultoId, receptor, timeProvider.GetUtcNow());
         await repository.GuardarCambiosAsync(cancellationToken);
         return Map(compra);
@@ -40,7 +42,16 @@ public sealed class CompraRecibidaService(
     public async Task EliminarAsync(Guid id, CancellationToken cancellationToken)
     {
         var compra = await FindAsync(id, cancellationToken);
-        repository.Eliminar(compra);
+        if (compra.FechaComprobanteEnviadoUtc is not null) throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["Una compra con comprobante enviado no puede eliminarse."] });
+                repository.Eliminar(compra);
+        await repository.GuardarCambiosAsync(cancellationToken);
+    }
+
+    public async Task MarcarComprobanteEnviadoAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var compra = await FindAsync(id, cancellationToken);
+        if (compra.FechaComprobanteEnviadoUtc is not null) throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["El comprobante de esta compra ya fue enviado."] });
+        compra.MarcarComprobanteEnviado(timeProvider.GetUtcNow());
         await repository.GuardarCambiosAsync(cancellationToken);
     }
 
@@ -66,7 +77,7 @@ public sealed class CompraRecibidaService(
     private async Task<CompraRecibida> FindAsync(Guid id, CancellationToken ct) => await repository.ObtenerPorIdAsync(id, ct) ?? throw new RecursoNoEncontradoException("la compra recibida", id);
     private static string Required(string value) => value.Trim();
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static CompraRecibidaResponse Map(CompraRecibida entity) => new(entity.Id, entity.ContenedorCompartidoId, entity.NombreContenedor, entity.NumeroContenedor, entity.EmpresaId, entity.Descripcion, entity.FechaSalida, entity.FechaLlegada, entity.Aduana, entity.PuertoLlegada, entity.MarcaBultoId, entity.ReceptorCodigoUsuario, entity.Receptor?.Nombre, entity.Receptor?.Correo, entity.FechaCreacionUtc, entity.FechaActualizacionUtc);
+    private static CompraRecibidaResponse Map(CompraRecibida entity) => new(entity.Id, entity.ContenedorCompartidoId, entity.NombreContenedor, entity.NumeroContenedor, entity.EmpresaId, entity.Descripcion, entity.FechaSalida, entity.FechaLlegada, entity.Aduana, entity.PuertoLlegada, entity.MarcaBultoId, entity.ReceptorCodigoUsuario, entity.Receptor?.Nombre, entity.Receptor?.Correo, entity.FechaCreacionUtc, entity.FechaActualizacionUtc, entity.FechaComprobanteEnviadoUtc);
 }
 
 

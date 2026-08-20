@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 using ChinaVenezuela.Application.Usuarios.Contracts;
 using ChinaVenezuela.Application.Usuarios.Interfaces;
@@ -10,11 +10,8 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
 {
     private static readonly HashSet<string> CodigosProtegidos = new(StringComparer.OrdinalIgnoreCase) { "MS", "SIS" };
 
-    public Task<UsuarioResponse> RegistrarAsync(RegistrarUsuarioRequest request, CancellationToken cancellationToken) =>
-        CrearInternoAsync(request.CodigoUsuario, request.Nombre, request.Correo, request.Contrasena, true, [request.NombreGrupo], cancellationToken);
-
     public async Task<UsuarioResponse> CrearAdministrativoAsync(CrearUsuarioAdministrativoRequest request, CancellationToken cancellationToken) =>
-        await CrearInternoAsync(request.CodigoUsuario, request.Nombre, request.Correo, request.Contrasena, request.Status, request.Grupos, cancellationToken);
+        await CrearInternoAsync(request.CodigoUsuario, request.Nombre, request.Correo, request.Contrasena, request.Status, request.Grupos, true, null, null, cancellationToken);
 
     public async Task<UsuarioResponse> ValidarCredencialesAsync(IniciarSesionRequest request, CancellationToken cancellationToken)
     {
@@ -24,6 +21,13 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
         var usuario = await repository.ObtenerPorNombreAsync(nombre, cancellationToken);
         if (usuario is null || !usuario.Status || !hasher.Verificar(request.Contrasena, usuario.ContrasenaHash)) throw new CredencialesInvalidasException();
         return Mapear(usuario);
+    }
+
+    public async Task<CuentaUsuarioResponse> ObtenerCuentaAsync(string codigoUsuario, CancellationToken cancellationToken)
+    {
+        var usuario = await ObtenerUsuarioAsync(codigoUsuario, cancellationToken);
+        if (string.IsNullOrWhiteSpace(usuario.Correo)) throw new ValidacionException(new Dictionary<string, string[]> { ["correo"] = ["Tu cuenta no tiene un correo registrado."] });
+        return new CuentaUsuarioResponse(usuario.CodigoUsuario, usuario.Nombre, usuario.Correo);
     }
 
     public Task<IReadOnlyList<string>> ObtenerGruposAsync(CancellationToken cancellationToken) => repository.ObtenerNombresGruposAsync(cancellationToken);
@@ -36,6 +40,7 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
             .OrderBy(usuario => usuario.Nombre)
             .Select(Mapear)
             .ToArray();
+
     public async Task<UsuarioResponse> ActualizarGruposAsync(string codigoSolicitante, string codigoUsuario, ActualizarGruposUsuarioRequest request, CancellationToken cancellationToken)
     {
         var usuario = await ObtenerUsuarioAsync(codigoUsuario, cancellationToken);
@@ -73,10 +78,10 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
 
     private static void ExigirAcceso(string codigoSolicitante, string codigoObjetivo)
     {
-        if (!PuedeAcceder(codigoSolicitante, codigoObjetivo))
-            throw new RecursoNoEncontradoPorNombreException("usuario", codigoObjetivo);
+        if (!PuedeAcceder(codigoSolicitante, codigoObjetivo)) throw new RecursoNoEncontradoPorNombreException("usuario", codigoObjetivo);
     }
-    private async Task<UsuarioResponse> CrearInternoAsync(string codigoUsuario, string nombreUsuario, string correoUsuario, string contrasena, bool status, IReadOnlyList<string> gruposSolicitados, CancellationToken cancellationToken)
+
+    private async Task<UsuarioResponse> CrearInternoAsync(string codigoUsuario, string nombreUsuario, string correoUsuario, string contrasena, bool status, IReadOnlyList<string> gruposSolicitados, bool correoVerificado, string? tokenVerificacionHash, DateTimeOffset? tokenVerificacionExpiraUtc, CancellationToken cancellationToken)
     {
         var codigo = ValidarCodigo(codigoUsuario);
         var nombre = ValidarNombre(nombreUsuario);
@@ -86,7 +91,7 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
         if (await repository.ExisteNombreAsync(nombre, cancellationToken)) throw new ConflictoException("Ya existe un usuario con ese nombre.");
         if (await repository.ExisteCorreoAsync(correo, cancellationToken)) throw new ConflictoException("Ya existe un usuario con ese correo.");
         var grupos = await ValidarYNormalizarGruposAsync(gruposSolicitados, cancellationToken);
-        var usuario = new Usuario(codigo, nombre, hasher.Hash(contrasena), status, correo);
+        var usuario = new Usuario(codigo, nombre, hasher.Hash(contrasena), status, correo, correoVerificado, tokenVerificacionHash, tokenVerificacionExpiraUtc);
         foreach (var grupo in grupos) usuario.Grupos.Add(new GrupoUsuario(codigo, grupo));
         await repository.AgregarAsync(usuario, cancellationToken);
         return Mapear(usuario);
@@ -118,7 +123,6 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
         if (string.IsNullOrWhiteSpace(nombre) || nombre.Trim().Length > 200) throw new ValidacionException(new Dictionary<string, string[]> { ["nombre"] = ["El nombre es obligatorio y debe tener un maximo de 200 caracteres."] });
         return nombre.Trim();
     }
-
     private static string ValidarCorreo(string? correo)
     {
         var valor = correo?.Trim().ToLowerInvariant() ?? string.Empty;
@@ -131,5 +135,3 @@ public sealed partial class UsuarioService(IUsuarioRepository repository, IContr
     [GeneratedRegex("^[A-Za-z0-9_-]+$")]
     private static partial Regex CodigoValido();
 }
-
-

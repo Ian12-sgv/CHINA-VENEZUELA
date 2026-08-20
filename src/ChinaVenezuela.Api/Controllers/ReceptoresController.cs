@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ChinaVenezuela.Application.Usuarios.Contracts;
 using ChinaVenezuela.Application.Usuarios.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,7 @@ namespace ChinaVenezuela.Api.Controllers;
 
 [ApiController]
 [Route("api/receptores")]
-[Authorize]
+[Authorize(Policy = "AccesoOperativo")]
 [Produces("application/json")]
 public sealed class ReceptoresController(IUsuarioService service) : ControllerBase
 {

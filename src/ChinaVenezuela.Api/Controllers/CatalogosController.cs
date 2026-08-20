@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace ChinaVenezuela.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "AccesoCompras")]
 [Produces("application/json")]
 public sealed class CatalogosController(ICatalogoService service, IHubContext<ActualizacionesHub> hub) : ControllerBase
 {
