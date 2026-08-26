@@ -1,29 +1,45 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { catalogosApi, empresasApi } from '../api'
+import { agentesApi, catalogosApi, empresasApi } from '../api'
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog'
-import type { CatalogoTipo, ClasificacionEmpresa, Empresa } from '../types'
+import type { AgentePedido, CatalogoTipo, ClasificacionEmpresa, Empresa } from '../types'
 
-const sections: { tipo: CatalogoTipo; titulo: string; descripcion: string }[] = [
+type SeccionTipo = CatalogoTipo | 'agentes'
+const sections: { tipo: SeccionTipo; titulo: string; descripcion: string }[] = [
   { tipo: 'contenedores-compartidos', titulo: 'Contenedor compartido', descripcion: 'Administra las opciones de contenedor compartido.' },
   { tipo: 'empresas', titulo: 'Empresa', descripcion: 'Administra las empresas asociadas a las compras recibidas.' },
   { tipo: 'marcas-bulto', titulo: 'Marca de bulto', descripcion: 'Administra las marcas identificadoras de la carga.' },
   { tipo: 'aduanas', titulo: 'Aduana', descripcion: 'Administra las aduanas disponibles para los recibos.' },
   { tipo: 'puertos-llegada', titulo: 'Puerto de llegada', descripcion: 'Administra los puertos disponibles para los recibos.' },
+  { tipo: 'agentes', titulo: 'Agentes', descripcion: 'Administra los agentes disponibles para los pedidos.' },
 ]
 
 export function CatalogosPage() {
-  const [activeType, setActiveType] = useState<CatalogoTipo>('contenedores-compartidos')
+  const [activeType, setActiveType] = useState<SeccionTipo>('contenedores-compartidos')
   const active = sections.find(section => section.tipo === activeType)!
 
   return <section className="page-grid">
     <div className="page-heading"><div><span className="eyebrow">Configuracion</span><h2>Catalogos operativos</h2><p>Estos registros alimentan los selectores de las recepciones.</p></div></div>
     <div className="tabs" role="tablist">{sections.map(section => <button key={section.tipo} className={activeType === section.tipo ? 'active' : ''} onClick={() => setActiveType(section.tipo)}>{section.titulo}</button>)}</div>
-    {activeType === 'empresas' ? <EmpresasSection /> : <CatalogSection key={active.tipo} {...active} />}
+    {activeType === 'empresas' ? <EmpresasSection /> : activeType === 'agentes' ? <AgentesSection /> : <CatalogSection key={active.tipo} tipo={activeType as CatalogoTipo} titulo={active.titulo} descripcion={active.descripcion} />}
   </section>
 }
 
+function AgentesSection() {
+  const client = useQueryClient()
+  const [nombre, setNombre] = useState('')
+  const [editando, setEditando] = useState<string | null>(null)
+  const [eliminando, setEliminando] = useState<AgentePedido | null>(null)
+  const [error, setError] = useState('')
+  const query = useQuery({ queryKey: ['pedidos-agentes'], queryFn: agentesApi.listar })
+  const refresh = () => void client.invalidateQueries({ queryKey: ['pedidos-agentes'] })
+  const save = useMutation({ mutationFn: () => editando ? agentesApi.actualizar(editando, nombre) : agentesApi.crear(nombre), onSuccess: () => { setNombre(''); setEditando(null); refresh() }, onError: reason => setError(reason instanceof Error ? reason.message : 'No fue posible guardar el agente.') })
+  const remove = useMutation({ mutationFn: (id: string) => agentesApi.eliminar(id), onSuccess: () => { setEliminando(null); refresh() }, onError: reason => { setEliminando(null); setError(reason instanceof Error ? reason.message : 'No fue posible eliminar el agente.') } })
+  const editar = (agente: AgentePedido) => { setEditando(agente.id); setNombre(agente.nombre); setError('') }
+
+  return <article className="card catalog-card tab-content"><div className="form-title"><div><h3>{editando ? 'Editar agente' : 'Nuevo agente'}</h3><p>Estos registros se muestran en el selector de agente de los pedidos.</p></div>{editando && <button className="link-button" onClick={() => { setEditando(null); setNombre('') }}>Cancelar</button>}</div><form className="inline-form" onSubmit={event => { event.preventDefault(); setError(''); save.mutate() }}><input value={nombre} onChange={event => setNombre(event.target.value)} required maxLength={150} placeholder="Nombre del agente" /><button className="primary" disabled={save.isPending}>{editando ? 'Guardar' : 'Agregar'}</button></form>{error && <p className="error">{error}</p>}<ul className="catalog-list">{query.data?.map(agente => <li key={agente.id}><span>{agente.nombre}</span><span><button className="link-button" onClick={() => editar(agente)}>Editar</button><button className="danger-button" onClick={() => setEliminando(agente)}>Eliminar</button></span></li>)}</ul><ConfirmDeleteDialog open={eliminando !== null} itemName={eliminando?.nombre ?? ''} onCancel={() => setEliminando(null)} onConfirm={() => eliminando && remove.mutate(eliminando.id)} /></article>
+}
 function EmpresasSection() {
   const client = useQueryClient()
   const [nombre, setNombre] = useState('')
@@ -63,7 +79,7 @@ function EmpresasSection() {
   </article>
 }
 
-function CatalogSection({ tipo, titulo, descripcion }: typeof sections[number]) {
+function CatalogSection({ tipo, titulo, descripcion }: { tipo: CatalogoTipo; titulo: string; descripcion: string }) {
   const client = useQueryClient()
   const [nombre, setNombre] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)

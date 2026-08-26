@@ -6,6 +6,7 @@ using ChinaVenezuela.Application.Pedidos.Contracts;
 using ChinaVenezuela.Application.Pedidos.Interfaces;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 using ChinaVenezuela.Application.Usuarios.Interfaces;
+using ChinaVenezuela.Domain.Pedidos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -23,12 +24,17 @@ public sealed class PedidosController(
     private const long TamanoMaximoImagen = 15 * 1024 * 1024;
 
     [HttpGet("productos")]
-    public async Task<ActionResult<PaginaProductosPedidoResponse>> ObtenerProductos([FromQuery] string? busqueda, [FromQuery] DateOnly? fechaPedido, [FromQuery] bool? enviado, [FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 10, CancellationToken ct = default)
+    public async Task<ActionResult<PaginaProductosPedidoResponse>> ObtenerProductos([FromQuery] string? busqueda, [FromQuery] bool? enviado, [FromQuery] Guid? pedidoId, [FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 10, CancellationToken ct = default)
     {
-        if (pagina < 1 || tamanoPagina is < 1 or > 100) return BadRequest("Los valores de paginación no son válidos.");
-        return Ok(await service.ObtenerProductosAsync(busqueda, fechaPedido, enviado, pagina, tamanoPagina, ct));
+        if (pagina < 1 || tamanoPagina is < 1 or > 5000) return BadRequest("Los valores de paginación no son válidos.");
+        return Ok(await service.ObtenerProductosAsync(busqueda, enviado, pedidoId, pagina, tamanoPagina, ct));
     }
 
+    [HttpGet("agentes")]
+    public async Task<ActionResult<IReadOnlyList<AgentePedidoResponse>>> ObtenerAgentes(CancellationToken ct) => Ok(await service.ObtenerAgentesAsync(ct));
+
+    [HttpGet("grupos")]
+    public async Task<ActionResult<IReadOnlyList<PedidoResumenResponse>>> ObtenerGrupos(CancellationToken ct) => Ok(await service.ObtenerPedidosAsync(ct));
     [HttpPost("productos")]
     public async Task<ActionResult<ProductoPedidoResponse>> CrearProducto(CrearProductoPedidoRequest request, CancellationToken ct)
     {
@@ -40,7 +46,7 @@ public sealed class PedidosController(
     [HttpPut("productos/{id:guid}")]
     public async Task<ActionResult<ProductoPedidoResponse>> ActualizarProducto(Guid id, ActualizarProductoPedidoRequest request, CancellationToken ct)
     {
-        var producto = await service.ActualizarProductoAsync(id, request, ct);
+        var producto = await service.ActualizarProductoAsync(id, CodigoSolicitante, request, ct);
         await NotificarAsync(ct);
         return Ok(producto);
     }
@@ -48,9 +54,9 @@ public sealed class PedidosController(
     [HttpDelete("productos/{id:guid}")]
     public async Task<IActionResult> EliminarProducto(Guid id, CancellationToken ct)
     {
-        var imagen = await service.ObtenerImagenAsync(id, ct);
+        var imagenes = await service.ObtenerImagenesAsync(id, ct);
         await service.EliminarProductoAsync(id, ct);
-        if (imagen is not null) await almacenamientoImagenes.EliminarAsync(imagen.ClaveAlmacenamiento, ct);
+        foreach (var imagen in imagenes) await almacenamientoImagenes.EliminarAsync(imagen.ClaveAlmacenamiento, ct);
         await NotificarAsync(ct);
         return NoContent();
     }
@@ -65,25 +71,47 @@ public sealed class PedidosController(
         var receptor = await usuarios.ObtenerPorCodigoAsync(request.ReceptorCodigoUsuario, ct);
         if (remitente is null || string.IsNullOrWhiteSpace(remitente.Correo)) throw new ValidacionException(new Dictionary<string, string[]> { ["correoRemitente"] = ["Tu usuario no tiene correo registrado."] });
         if (receptor is null || string.IsNullOrWhiteSpace(receptor.Correo)) throw new ValidacionException(new Dictionary<string, string[]> { ["correoReceptor"] = ["El receptor no tiene correo registrado."] });
-        var enviado = await correos.EnviarAsync(new EnvioComprobanteRequest(receptor.Correo, receptor.Nombre, remitente.Correo, remitente.Nombre, $"Producto para pedido - {producto.Nombre}", CrearHtmlProducto(producto, remitente.Nombre, receptor.Nombre)), ct);
+        var enviado = await correos.EnviarAsync(new EnvioComprobanteRequest(receptor.Correo, receptor.Nombre, remitente.Correo, remitente.Nombre, $"Producto para pedido - {producto.ReferenciaAsignada}", CrearHtmlProducto(producto, remitente.Nombre, receptor.Nombre)), ct);
         await service.MarcarComoEnviadoAsync(id, ct);
         await NotificarAsync(ct);
         return Ok(enviado);
     }
 
+    [HttpPut("productos/{id:guid}/imagenes/{tipo}"), RequestSizeLimit(TamanoMaximoImagen)]
+    [Consumes("multipart/form-data")]
+    public Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagen(Guid id, string tipo, [FromForm] SubirImagenProductoRequest request, CancellationToken ct) => GuardarImagenInterna(id, ConvertirTipo(tipo), request, ct);
+
+    [HttpGet("productos/{id:guid}/imagenes/{tipo}"), Produces("image/jpeg", "image/png", "image/webp")]
+    public Task<IActionResult> ObtenerImagen(Guid id, string tipo, CancellationToken ct) => ObtenerImagenInterna(id, ConvertirTipo(tipo), ct);
+
+    [HttpDelete("productos/{id:guid}/imagenes/{tipo}")]
+    public Task<IActionResult> EliminarImagen(Guid id, string tipo, CancellationToken ct) => EliminarImagenInterna(id, ConvertirTipo(tipo), ct);
+
+    // Compatibilidad: la ruta anterior representa la imagen de producto terminado.
     [HttpPut("productos/{id:guid}/imagen"), RequestSizeLimit(TamanoMaximoImagen)]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagen(Guid id, [FromForm] SubirImagenProductoRequest request, CancellationToken ct)
+    public Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagenTerminada(Guid id, [FromForm] SubirImagenProductoRequest request, CancellationToken ct) => GuardarImagenInterna(id, TipoImagenProductoPedido.ProductoTerminado, request, ct);
+
+    [HttpGet("productos/{id:guid}/imagen"), Produces("image/jpeg", "image/png", "image/webp")]
+    public Task<IActionResult> ObtenerImagenTerminada(Guid id, CancellationToken ct) => ObtenerImagenInterna(id, TipoImagenProductoPedido.ProductoTerminado, ct);
+
+    [HttpDelete("productos/{id:guid}/imagen")]
+    public Task<IActionResult> EliminarImagenTerminada(Guid id, CancellationToken ct) => EliminarImagenInterna(id, TipoImagenProductoPedido.ProductoTerminado, ct);
+
+    [HttpGet("registros-precios")]
+    public async Task<ActionResult<IReadOnlyList<RegistroPrecioPedidoResponse>>> ObtenerRegistrosPrecios([FromQuery] string? busqueda, CancellationToken ct) => Ok(await service.ObtenerRegistrosPreciosAsync(busqueda, ct));
+
+    private async Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagenInterna(Guid id, TipoImagenProductoPedido tipo, SubirImagenProductoRequest request, CancellationToken ct)
     {
         var imagen = request.Imagen;
         var validada = await ValidarImagenAsync(imagen, ct);
-        var anterior = await service.ObtenerImagenAsync(id, ct);
-        var clave = $"{Guid.NewGuid():N}{validada.Extension}";
+        var anterior = await service.ObtenerImagenAsync(id, tipo, ct);
+        var clave = $"{tipo.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}{validada.Extension}";
         try
         {
             await using var contenido = validada.Contenido;
             await almacenamientoImagenes.GuardarAsync(clave, contenido, ct);
-            var respuesta = await service.GuardarImagenAsync(id, new GuardarImagenProductoPedidoRequest(clave, Path.GetFileName(imagen.FileName), validada.TipoContenido, imagen.Length), ct);
+            var respuesta = await service.GuardarImagenAsync(id, tipo, new GuardarImagenProductoPedidoRequest(clave, Path.GetFileName(imagen.FileName), validada.TipoContenido, imagen.Length), ct);
             if (anterior is not null) await almacenamientoImagenes.EliminarAsync(anterior.ClaveAlmacenamiento, ct);
             await NotificarAsync(ct);
             return Ok(respuesta);
@@ -95,31 +123,31 @@ public sealed class PedidosController(
         }
     }
 
-    [HttpGet("productos/{id:guid}/imagen"), Produces("image/jpeg", "image/png", "image/webp")]
-    public async Task<IActionResult> ObtenerImagen(Guid id, CancellationToken ct)
+    private async Task<IActionResult> ObtenerImagenInterna(Guid id, TipoImagenProductoPedido tipo, CancellationToken ct)
     {
-        var imagen = await service.ObtenerImagenAsync(id, ct);
+        var imagen = await service.ObtenerImagenAsync(id, tipo, ct);
         if (imagen is null) return NotFound();
-        var clave = imagen.ClaveAlmacenamiento;
-        var contenido = await almacenamientoImagenes.AbrirLecturaAsync(clave, ct);
+        var contenido = await almacenamientoImagenes.AbrirLecturaAsync(imagen.ClaveAlmacenamiento, ct);
         return contenido is null ? NotFound() : File(contenido, imagen.TipoContenido, enableRangeProcessing: true);
     }
 
-    [HttpDelete("productos/{id:guid}/imagen")]
-    public async Task<IActionResult> EliminarImagen(Guid id, CancellationToken ct)
+    private async Task<IActionResult> EliminarImagenInterna(Guid id, TipoImagenProductoPedido tipo, CancellationToken ct)
     {
-        var imagen = await service.EliminarImagenAsync(id, ct);
+        var imagen = await service.EliminarImagenAsync(id, tipo, ct);
         if (imagen is null) return NoContent();
         await almacenamientoImagenes.EliminarAsync(imagen.ClaveAlmacenamiento, ct);
         await NotificarAsync(ct);
         return NoContent();
     }
 
-    [HttpGet("registros-precios")]
-    public async Task<ActionResult<IReadOnlyList<RegistroPrecioPedidoResponse>>> ObtenerRegistrosPrecios([FromQuery] string? busqueda, CancellationToken ct) => Ok(await service.ObtenerRegistrosPreciosAsync(busqueda, ct));
-
     private Task NotificarAsync(CancellationToken ct) => hub.Clients.All.SendAsync(ActualizacionesHub.DatosActualizados, ct);
     private string CodigoSolicitante => User.FindFirstValue("codigo_usuario") ?? throw new InvalidOperationException("No existe código de usuario en la sesión.");
+    private static TipoImagenProductoPedido ConvertirTipo(string tipo) => tipo.Trim().ToLowerInvariant() switch
+    {
+        "fabrica" or "fábrica" => TipoImagenProductoPedido.Fabrica,
+        "producto-terminado" or "terminado" => TipoImagenProductoPedido.ProductoTerminado,
+        _ => throw new ValidacionException(new Dictionary<string, string[]> { ["tipo"] = ["El tipo de imagen debe ser fabrica o producto-terminado."] })
+    };
 
     private static async Task<ImagenValidada> ValidarImagenAsync(IFormFile? imagen, CancellationToken ct)
     {
@@ -146,9 +174,8 @@ public sealed class PedidosController(
         var encoder = HtmlEncoder.Default;
         string F(string value) => encoder.Encode(value);
         string Row(string nombre, string valor) => $"<tr><td style=\"padding:8px;border:1px solid #dbe5f1;font-weight:600\">{F(nombre)}</td><td style=\"padding:8px;border:1px solid #dbe5f1\">{F(valor)}</td></tr>";
-        return $"<div style=\"font-family:Arial,sans-serif;color:#12345b\"><h2>Producto para pedido</h2><p>Detalle del producto enviado desde China - Venezuela.</p><table style=\"border-collapse:collapse\">{Row("Origen", origen)}{Row("Receptor", receptor)}{Row("Fecha del pedido", producto.FechaPedido.ToString("dd/MM/yyyy"))}{Row("Código de barra", producto.CodigoBarra)}{Row("Referencia", producto.Referencia)}{Row("Producto", producto.Nombre)}{Row("Categoría", producto.Categoria)}{Row("Marca", producto.Marca ?? "No aplica")}{Row("Precio detal", producto.PrecioDetal.ToString("0.00"))}</table></div>";
+        return $"<div style=\"font-family:Arial,sans-serif;color:#12345b\"><h2>Producto para pedido</h2><p>Detalle del producto enviado desde China - Venezuela.</p><table style=\"border-collapse:collapse\">{Row("Origen", origen)}{Row("Receptor", receptor)}{Row("Código de barra asignado", producto.CodigoBarraAsignado)}{Row("Referencia asignada", producto.ReferenciaAsignada)}{Row("Tipo de pedido", producto.TipoProducto ?? "No aplica")}{Row("Agente", producto.Agente ?? "No aplica")}{Row("Fábrica", producto.Fabrica ?? "No aplica")}{Row("Composición de tela", producto.ComposicionTela ?? "No aplica")}{Row("Color para fabricar", producto.ColorParaFabricar ?? "No aplica")}{Row("Marca del producto", producto.MarcaProducto ?? "No aplica")}{Row("Curva talla", producto.CurvaTalla ?? "No aplica")}{Row("Pack por cajas", producto.PackPorCaja?.ToString() ?? "No aplica")}{Row("Cantidad de unidades", producto.CantidadUnidades?.ToString() ?? "No aplica")}{Row("Marca del bulto", producto.MarcaBulto ?? "No aplica")}{Row("Cantidad de bultos", producto.CantidadBulto?.ToString() ?? "No aplica")}</table></div>";
     }
-
     private sealed record ImagenValidada(MemoryStream Contenido, string TipoContenido, string Extension);
     public sealed class SubirImagenProductoRequest { public IFormFile Imagen { get; init; } = null!; }
 }

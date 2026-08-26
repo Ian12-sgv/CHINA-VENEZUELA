@@ -10,8 +10,7 @@ public sealed record CrearCompraRecibidaRequest(
     DateOnly? FechaLlegada,
     string? Aduana,
     string PuertoLlegada,
-    Guid? MarcaBultoId,
-    string ReceptorCodigoUsuario);
+    Guid? MarcaBultoId,    string ReceptorCodigoUsuario);
 
 public sealed record ActualizarCompraRecibidaRequest(
     Guid? ContenedorCompartidoId,
@@ -23,8 +22,7 @@ public sealed record ActualizarCompraRecibidaRequest(
     DateOnly? FechaLlegada,
     string? Aduana,
     string PuertoLlegada,
-    Guid? MarcaBultoId,
-    string ReceptorCodigoUsuario);
+    Guid? MarcaBultoId,    string ReceptorCodigoUsuario);
 
 public sealed record CompraRecibidaResponse(
     Guid Id,
@@ -37,8 +35,7 @@ public sealed record CompraRecibidaResponse(
     DateOnly? FechaLlegada,
     string? Aduana,
     string PuertoLlegada,
-    Guid? MarcaBultoId,
-    string? ReceptorCodigoUsuario,
+    Guid? MarcaBultoId,    string? ReceptorCodigoUsuario,
     string? ReceptorNombre,
     string? ReceptorCorreo,
     DateTimeOffset FechaCreacionUtc,

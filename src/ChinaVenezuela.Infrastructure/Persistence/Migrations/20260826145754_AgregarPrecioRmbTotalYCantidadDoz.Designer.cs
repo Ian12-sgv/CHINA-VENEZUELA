@@ -3,6 +3,7 @@ using System;
 using ChinaVenezuela.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ChinaVenezuelaDbContext))]
-    partial class ChinaVenezuelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826145754_AgregarPrecioRmbTotalYCantidadDoz")]
+    partial class AgregarPrecioRmbTotalYCantidadDoz
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -281,10 +284,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
                         .HasColumnName("agente");
-
-                    b.Property<int?>("CantidadBulto")
-                        .HasColumnType("integer")
-                        .HasColumnName("cantidad_bulto");
 
                     b.Property<int?>("CantidadDoz")
                         .HasColumnType("integer")

@@ -17,8 +17,7 @@ public sealed class CompraRecibida
         DateOnly? fechaLlegada,
         string? aduana,
         string puertoLlegada,
-        Guid? marcaBultoId,
-        string receptorCodigoUsuario,
+        Guid? marcaBultoId,        string receptorCodigoUsuario,
         DateTimeOffset fechaCreacionUtc)
     {
         Id = Guid.NewGuid();
@@ -31,8 +30,7 @@ public sealed class CompraRecibida
         FechaLlegada = fechaLlegada;
         Aduana = aduana;
         PuertoLlegada = puertoLlegada;
-        MarcaBultoId = marcaBultoId;
-        ReceptorCodigoUsuario = receptorCodigoUsuario;
+        MarcaBultoId = marcaBultoId;        ReceptorCodigoUsuario = receptorCodigoUsuario;
         FechaCreacionUtc = fechaCreacionUtc;
     }
 
@@ -49,8 +47,7 @@ public sealed class CompraRecibida
     public string? Aduana { get; private set; }
     public string PuertoLlegada { get; private set; } = null!;
     public Guid? MarcaBultoId { get; private set; }
-    public MarcaBulto? MarcaBulto { get; private set; }
-    public string? ReceptorCodigoUsuario { get; private set; }
+    public MarcaBulto? MarcaBulto { get; private set; }    public string? ReceptorCodigoUsuario { get; private set; }
     public Usuario? Receptor { get; private set; }
     public DateTimeOffset FechaCreacionUtc { get; private set; }
     public DateTimeOffset? FechaActualizacionUtc { get; private set; }
@@ -68,8 +65,7 @@ public sealed class CompraRecibida
         DateOnly? fechaLlegada,
         string? aduana,
         string puertoLlegada,
-        Guid? marcaBultoId,
-        string receptorCodigoUsuario,
+        Guid? marcaBultoId,        string receptorCodigoUsuario,
         DateTimeOffset fechaActualizacionUtc)
     {
         ContenedorCompartidoId = contenedorCompartidoId;
@@ -81,8 +77,7 @@ public sealed class CompraRecibida
         FechaLlegada = fechaLlegada;
         Aduana = aduana;
         PuertoLlegada = puertoLlegada;
-        MarcaBultoId = marcaBultoId;
-        ReceptorCodigoUsuario = receptorCodigoUsuario;
+        MarcaBultoId = marcaBultoId;        ReceptorCodigoUsuario = receptorCodigoUsuario;
         FechaActualizacionUtc = fechaActualizacionUtc;
     }
 }

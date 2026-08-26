@@ -1,4 +1,4 @@
-﻿using ChinaVenezuela.Application.Recepciones.Contracts;
+using ChinaVenezuela.Application.Recepciones.Contracts;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
 
 namespace ChinaVenezuela.Application.Recepciones.Validation;
@@ -17,8 +17,7 @@ public static class CompraRecibidaValidator
         Required(receptorCodigoUsuario, nameof(receptorCodigoUsuario), 50, errores);
         Optional(descripcion, nameof(descripcion), 2000, errores);
         Optional(aduana, nameof(aduana), 200, errores);
-        if (empresaId == Guid.Empty) errores[nameof(empresaId)] = ["La empresa es obligatoria."];
-        if (fechaLlegada is not null && fechaLlegada < fechaSalida) errores[nameof(fechaLlegada)] = ["La fecha de llegada no puede ser anterior a la fecha de salida."];
+        if (empresaId == Guid.Empty) errores[nameof(empresaId)] = ["La empresa es obligatoria."];        if (fechaLlegada is not null && fechaLlegada < fechaSalida) errores[nameof(fechaLlegada)] = ["La fecha de llegada no puede ser anterior a la fecha de salida."];
         if (errores.Count > 0) throw new ValidacionException(errores);
     }
 

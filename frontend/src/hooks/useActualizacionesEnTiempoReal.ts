@@ -1,4 +1,4 @@
-﻿import { useEffect } from 'react'
+import { useEffect } from 'react'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { useQueryClient } from '@tanstack/react-query'
 import { actualizacionesHubUrl, getAccessToken } from '../api'
@@ -13,6 +13,10 @@ const queryKeys = [
   ['grupos'],
   ['usuarios'],
   ['receptores'],
+  ['pedidos-productos'],
+  ['pedidos-grupos'],
+  ['pedidos-grupo-detalle'],
+  ['pedidos-agentes'],
 ] as const
 
 export function useActualizacionesEnTiempoReal() {

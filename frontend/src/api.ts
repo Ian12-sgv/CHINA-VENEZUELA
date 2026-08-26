@@ -18,6 +18,9 @@ import type {
   RegistroPrecioPedido,
   PaginaProductosPedido,
   CuentaUsuario,
+  TipoImagenProductoPedido,
+  AgentePedido,
+  PedidoResumen,
 } from './types'
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '/api'
@@ -116,14 +119,23 @@ export const catalogosApi = {
 
 
 
+export const agentesApi = {
+  listar: () => request<AgentePedido[]>('/agentes'),
+  crear: (nombre: string) => request<AgentePedido>('/agentes', { method: 'POST', body: JSON.stringify({ nombre }) }),
+  actualizar: (id: string, nombre: string) => request<AgentePedido>(`/agentes/${id}`, { method: 'PUT', body: JSON.stringify({ nombre }) }),
+  eliminar: (id: string) => request<void>(`/agentes/${id}`, { method: 'DELETE' }),
+}
+
 export const pedidosApi = {
-  productos: (pagina = 1, busqueda = '', fechaPedido = '', enviado?: boolean) => request<PaginaProductosPedido>(`/pedidos/productos?pagina=${pagina}&tamanoPagina=10${busqueda ? `&busqueda=${encodeURIComponent(busqueda)}` : ''}${fechaPedido ? `&fechaPedido=${fechaPedido}` : ''}${enviado === undefined ? '' : `&enviado=${enviado}`}`),
+  agentes: () => request<AgentePedido[]>('/pedidos/agentes'),
+  grupos: () => request<PedidoResumen[]>('/pedidos/grupos'),
+  productos: (pagina = 1, busqueda = '', enviado?: boolean, tamanoPagina = 10, pedidoId = '') => request<PaginaProductosPedido>(`/pedidos/productos?pagina=${pagina}&tamanoPagina=${tamanoPagina}${busqueda ? `&busqueda=${encodeURIComponent(busqueda)}` : ''}${enviado === undefined ? '' : `&enviado=${enviado}`}${pedidoId ? `&pedidoId=${encodeURIComponent(pedidoId)}` : ''}`),
   crearProducto: (data: CrearProductoPedidoRequest) => request<ProductoPedido>('/pedidos/productos', { method: 'POST', body: JSON.stringify(data) }),
   actualizarProducto: (id: string, data: ActualizarProductoPedidoRequest) => request<ProductoPedido>(`/pedidos/productos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   eliminarProducto: (id: string) => request<void>(`/pedidos/productos/${id}`, { method: 'DELETE' }),
   enviarProducto: (id: string, receptorCodigoUsuario: string) => request<{ receptor: string; copia: string; enviadoEnUtc: string }>(`/pedidos/productos/${id}/enviar`, { method: 'POST', body: JSON.stringify({ receptorCodigoUsuario }) }),
-  subirImagen: (id: string, archivo: File) => { const data = new FormData(); data.append('imagen', archivo); return requestMultipart(`/pedidos/productos/${id}/imagen`, data) },
-  obtenerImagen: (id: string) => obtenerImagen(`/pedidos/productos/${id}/imagen`),
-  eliminarImagen: (id: string) => request<void>(`/pedidos/productos/${id}/imagen`, { method: 'DELETE' }),
+  subirImagen: (id: string, tipo: TipoImagenProductoPedido, archivo: File) => { const data = new FormData(); data.append('imagen', archivo); return requestMultipart(`/pedidos/productos/${id}/imagenes/${tipo}`, data) },
+  obtenerImagen: (id: string, tipo: TipoImagenProductoPedido) => obtenerImagen(`/pedidos/productos/${id}/imagenes/${tipo}`),
+  eliminarImagen: (id: string, tipo: TipoImagenProductoPedido) => request<void>(`/pedidos/productos/${id}/imagenes/${tipo}`, { method: 'DELETE' }),
   registrosPrecios: () => request<RegistroPrecioPedido[]>('/pedidos/registros-precios'),
 }

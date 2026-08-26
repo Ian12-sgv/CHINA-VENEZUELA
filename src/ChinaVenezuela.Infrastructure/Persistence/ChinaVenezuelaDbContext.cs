@@ -24,6 +24,9 @@ public sealed class ChinaVenezuelaDbContext(DbContextOptions<ChinaVenezuelaDbCon
     public DbSet<ProductoPedido> ProductosPedido => Set<ProductoPedido>();
     public DbSet<ProductoPedidoImagen> ProductosPedidoImagenes => Set<ProductoPedidoImagen>();
     public DbSet<RegistroPrecioPedido> RegistrosPrecioPedido => Set<RegistroPrecioPedido>();
+    public DbSet<AgentePedido> AgentesPedido => Set<AgentePedido>();
+    public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<PedidoGrupo> PedidosGrupos => Set<PedidoGrupo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChinaVenezuelaDbContext).Assembly);
 

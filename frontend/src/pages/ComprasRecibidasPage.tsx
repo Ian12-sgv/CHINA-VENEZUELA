@@ -51,8 +51,7 @@ export function ComprasRecibidasPage() {
         item.fechaLlegada ?? '',
         date(item.fechaLlegada),
         item.puertoLlegada,
-        name(marcas.data, item.marcaBultoId),
-        item.receptorNombre ?? '',
+        name(marcas.data, item.marcaBultoId),        item.receptorNombre ?? '',
       ]
 
       return searchableFields

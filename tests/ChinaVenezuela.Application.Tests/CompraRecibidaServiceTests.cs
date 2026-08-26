@@ -24,8 +24,7 @@ public sealed class CompraRecibidaServiceTests
         var response = await service.CrearAsync("REMITE", request, CancellationToken.None);
 
         Assert.Equal(catalogos.EmpresaId, response.EmpresaId);
-        Assert.Equal(fecha, response.FechaCreacionUtc);
-        Assert.Single(repository.Items);
+        Assert.Equal(fecha, response.FechaCreacionUtc);        Assert.Single(repository.Items);
         Assert.True(repository.Guardado);
     }
 
@@ -39,7 +38,6 @@ public sealed class CompraRecibidaServiceTests
 
         Assert.Contains("fechaLlegada", exception.Errores.Keys);
     }
-
     private sealed class RelojFijo(DateTimeOffset fecha) : TimeProvider { public override DateTimeOffset GetUtcNow() => fecha; }
 
     private sealed class RepositorioEnMemoria : ICompraRecibidaRepository

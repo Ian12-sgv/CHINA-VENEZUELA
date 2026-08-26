@@ -1,36 +1,8 @@
 export type Catalogo = { id: string; nombre: string }
-
-export type CompraRecibida = {
-  id: string
-  contenedorCompartidoId: string | null
-  nombreContenedor: string
-  numeroContenedor: string
-  empresaId: string
-  descripcion: string | null
-  fechaSalida: string
-  fechaLlegada: string | null
-  aduana: string | null
-  puertoLlegada: string
-  marcaBultoId: string | null
-  receptorCodigoUsuario: string | null
-  receptorNombre: string | null
-  receptorCorreo: string | null
-  fechaCreacionUtc: string
-  fechaActualizacionUtc: string | null
-  fechaComprobanteEnviadoUtc: string | null
-}
-
+export type CompraRecibida = { id: string; contenedorCompartidoId: string | null; nombreContenedor: string; numeroContenedor: string; empresaId: string; descripcion: string | null; fechaSalida: string; fechaLlegada: string | null; aduana: string | null; puertoLlegada: string; marcaBultoId: string | null; receptorCodigoUsuario: string | null; receptorNombre: string | null; receptorCorreo: string | null; fechaCreacionUtc: string; fechaActualizacionUtc: string | null; fechaComprobanteEnviadoUtc: string | null }
 export type CompraRecibidaRequest = Omit<CompraRecibida, 'id' | 'receptorNombre' | 'receptorCorreo' | 'fechaCreacionUtc' | 'fechaActualizacionUtc' | 'fechaComprobanteEnviadoUtc'>
 export type CatalogoTipo = 'empresas' | 'marcas-bulto' | 'contenedores-compartidos' | 'aduanas' | 'puertos-llegada'
-
-export type UsuarioSesion = {
-  codigoUsuario: string
-  nombre: string
-  correo: string | null
-  status: boolean
-  grupos: string[]
-}
-
+export type UsuarioSesion = { codigoUsuario: string; nombre: string; correo: string | null; status: boolean; grupos: string[] }
 export type InicioSesionResponse = { token: string; usuario: UsuarioSesion }
 export type IniciarSesionRequest = { nombre: string; contrasena: string }
 export type Grupo = { nombre: string; protegido: boolean }
@@ -41,18 +13,11 @@ export type ActualizarUsuarioAdministrativoRequest = { nombre: string; correo?: 
 export type ClasificacionEmpresa = 'Oriente' | 'Occidente' | 'Aliada'
 export type Empresa = { id: string; nombre: string; rif: string | null; clasificacion: ClasificacionEmpresa | null }
 export type EmpresaRequest = { nombre: string; rif: string; clasificacion: ClasificacionEmpresa }
-
-
-
-
-
-
-
-
-
-export type ProductoPedido = { id: string; codigoBarra: string; referencia: string; nombre: string; marca: string | null; categoria: string; talla: string | null; color: string | null; fabricante: string | null; precioDetal: number; costo: number; fechaPedido: string; activo: boolean; enviado: boolean; fechaEnvioUtc: string | null; tieneImagen: boolean; creadoPorCodigoUsuario: string; fechaCreacionUtc: string }
-export type CrearProductoPedidoRequest = Omit<ProductoPedido, 'id' | 'activo' | 'enviado' | 'fechaEnvioUtc' | 'tieneImagen' | 'creadoPorCodigoUsuario' | 'fechaCreacionUtc'>
+export type TipoImagenProductoPedido = 'fabrica' | 'producto-terminado'
+export type AgentePedido = { id: string; nombre: string }
+export type PedidoResumen = { id: string; nombre: string; cantidadPedidos: number }
+export type ProductoPedido = { id: string; pedidoId: string | null; grupoPedidoNombre: string | null; codigoBarraAsignado: string; precioRmb: number | null; totalRmb: number | null; cantidadDoz: number | null; referenciaAsignada: string; tipoProducto: 'Nuevo' | 'Repetido' | null; agente: string | null; fabrica: string | null; composicionTela: string | null; colorParaFabricar: string | null; marcaProducto: string | null; curvaTalla: string | null; packPorCaja: number | null; cantidadUnidades: number | null; marcaBulto: string | null; cantidadBulto: number | null; activo: boolean; enviado: boolean; fechaEnvioUtc: string | null; tieneImagenFabrica: boolean; tieneImagenProductoTerminado: boolean; creadoPorCodigoUsuario: string; fechaCreacionUtc: string }
+export type CrearProductoPedidoRequest = Omit<ProductoPedido, 'id' | 'grupoPedidoNombre' | 'activo' | 'enviado' | 'fechaEnvioUtc' | 'tieneImagenFabrica' | 'tieneImagenProductoTerminado' | 'creadoPorCodigoUsuario' | 'fechaCreacionUtc'> & { nombreNuevoGrupo: string | null }
+export type ActualizarProductoPedidoRequest = CrearProductoPedidoRequest
 export type RegistroPrecioPedido = { id: string; codigoBarra: string; producto: string; sucursal: string; precioSistema: number; precioVerificado: number }
 export type PaginaProductosPedido = { items: ProductoPedido[]; total: number; pagina: number; tamanoPagina: number; totalPaginas: number }
-
-export type ActualizarProductoPedidoRequest = CrearProductoPedidoRequest

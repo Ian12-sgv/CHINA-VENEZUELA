@@ -3,6 +3,7 @@ using System;
 using ChinaVenezuela.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ChinaVenezuelaDbContext))]
-    partial class ChinaVenezuelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260825154432_AgregarAgrupacionYTipoProducto")]
+    partial class AgregarAgrupacionYTipoProducto
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -282,14 +285,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("agente");
 
-                    b.Property<int?>("CantidadBulto")
-                        .HasColumnType("integer")
-                        .HasColumnName("cantidad_bulto");
-
-                    b.Property<int?>("CantidadDoz")
-                        .HasColumnType("integer")
-                        .HasColumnName("cantidad_doz");
-
                     b.Property<int?>("CantidadUnidades")
                         .HasColumnType("integer")
                         .HasColumnName("cantidad_unidades");
@@ -354,11 +349,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("pack_por_caja");
 
-                    b.Property<decimal?>("PrecioRmb")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("precio_rmb");
-
                     b.Property<string>("ReferenciaAsignada")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -369,11 +359,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("tipo_producto");
-
-                    b.Property<decimal?>("TotalRmb")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("total_rmb");
 
                     b.HasKey("Id");
 

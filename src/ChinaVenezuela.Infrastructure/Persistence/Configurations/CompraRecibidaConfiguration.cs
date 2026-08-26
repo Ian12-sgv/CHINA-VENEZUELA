@@ -20,8 +20,7 @@ public sealed class CompraRecibidaConfiguration : IEntityTypeConfiguration<Compr
         builder.Property(x => x.FechaLlegada).HasColumnName("fecha_llegada").HasColumnType("date");
         builder.Property(x => x.Aduana).HasColumnName("aduana").HasMaxLength(200);
         builder.Property(x => x.PuertoLlegada).HasColumnName("puerto_llegada").HasMaxLength(200).IsRequired();
-        builder.Property(x => x.MarcaBultoId).HasColumnName("marca_bulto_id");
-        builder.Property(x => x.ReceptorCodigoUsuario).HasColumnName("receptor_codigo_usuario").HasMaxLength(50);
+        builder.Property(x => x.MarcaBultoId).HasColumnName("marca_bulto_id");        builder.Property(x => x.ReceptorCodigoUsuario).HasColumnName("receptor_codigo_usuario").HasMaxLength(50);
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone").IsRequired();
         builder.Property(x => x.FechaActualizacionUtc).HasColumnName("fecha_actualizacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.FechaComprobanteEnviadoUtc).HasColumnName("fecha_comprobante_enviado_utc").HasColumnType("timestamp with time zone");
