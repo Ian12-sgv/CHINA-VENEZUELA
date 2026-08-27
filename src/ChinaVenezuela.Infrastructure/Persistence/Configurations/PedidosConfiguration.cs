@@ -28,6 +28,8 @@ public sealed class ProductoPedidoConfiguration : IEntityTypeConfiguration<Produ
         builder.Property(x => x.CantidadUnidades).HasColumnName("cantidad_unidades");
         builder.Property(x => x.MarcaBulto).HasColumnName("marca_bulto").HasMaxLength(100);
         builder.Property(x => x.CantidadBulto).HasColumnName("cantidad_bulto");
+        builder.Property(x => x.FechaRegistroPedido).HasColumnName("fecha_registro_pedido").HasColumnType("date").IsRequired();
+        builder.Property(x => x.FechaInicioFabricacion).HasColumnName("fecha_inicio_fabricacion").HasColumnType("date");
         builder.Property(x => x.Activo).HasColumnName("activo");
         builder.Property(x => x.Enviado).HasColumnName("enviado").HasDefaultValue(false);
         builder.Property(x => x.FechaEnvioUtc).HasColumnName("fecha_envio_utc");

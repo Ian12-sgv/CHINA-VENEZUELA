@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
     CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
@@ -1086,3 +1086,29 @@ BEGIN
     END IF;
 END $EF$;
 COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827152421_AgregarFechasRegistroEInicioFabricacionPedido') THEN
+    ALTER TABLE producto_pedido ADD fecha_inicio_fabricacion date;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827152421_AgregarFechasRegistroEInicioFabricacionPedido') THEN
+    ALTER TABLE producto_pedido ADD fecha_registro_pedido date NOT NULL DEFAULT (CURRENT_DATE);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260827152421_AgregarFechasRegistroEInicioFabricacionPedido') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260827152421_AgregarFechasRegistroEInicioFabricacionPedido', '10.0.0');
+    END IF;
+END $EF$;
+COMMIT;
+

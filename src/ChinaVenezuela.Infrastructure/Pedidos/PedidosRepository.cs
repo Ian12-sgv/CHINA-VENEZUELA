@@ -18,7 +18,7 @@ public sealed class PedidosRepository(ChinaVenezuelaDbContext context) : IPedido
         if (enviado is not null) query = query.Where(x => x.Enviado == enviado.Value);
         if (pedidoId is not null) query = query.Where(x => x.GrupoPedido != null && x.GrupoPedido.PedidoId == pedidoId.Value);
         var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(x => x.ReferenciaAsignada).Skip((pagina - 1) * tamanoPagina).Take(tamanoPagina).ToListAsync(ct);
+        var items = await query.OrderBy(x => x.ReferenciaAsignada).ThenBy(x => x.FechaCreacionUtc).Skip((pagina - 1) * tamanoPagina).Take(tamanoPagina).ToListAsync(ct);
         return (items, total);
     }
 

@@ -14,6 +14,7 @@ public interface IPedidosService
     Task<ProductoPedidoResponse> CrearProductoAsync(string codigoUsuario, CrearProductoPedidoRequest request, CancellationToken ct);
     Task<ProductoPedidoResponse> ObtenerProductoAsync(Guid id, CancellationToken ct);
     Task<ProductoPedidoResponse> ActualizarProductoAsync(Guid id, string codigoUsuario, ActualizarProductoPedidoRequest request, CancellationToken ct);
+    Task<ProductoPedidoResponse> DuplicarProductoAsync(Guid id, string codigoUsuario, DuplicarProductoPedidoRequest request, CancellationToken ct);
     Task EliminarProductoAsync(Guid id, CancellationToken ct);
     Task MarcarComoEnviadoAsync(Guid id, CancellationToken ct);
     Task<ProductoPedidoImagenResponse?> ObtenerImagenAsync(Guid productoPedidoId, TipoImagenProductoPedido tipo, CancellationToken ct);

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using ChinaVenezuela.Api.Comprobantes;
 using ChinaVenezuela.Api.Hubs;
+using ChinaVenezuela.Api.Pedidos;
 using ChinaVenezuela.Application.Pedidos.Contracts;
 using ChinaVenezuela.Application.Pedidos.Interfaces;
 using ChinaVenezuela.Application.Recepciones.Exceptions;
@@ -51,6 +52,71 @@ public sealed class PedidosController(
         return Ok(producto);
     }
 
+    [HttpPost("productos/{id:guid}/duplicar")]
+    public async Task<ActionResult<ProductoPedidoResponse>> DuplicarProducto(Guid id, DuplicarProductoPedidoRequest request, CancellationToken ct)
+    {
+        var imagenesOriginales = await service.ObtenerImagenesAsync(id, ct);
+        ProductoPedidoResponse? producto = null;
+        var clavesCreadas = new List<string>();
+
+        try
+        {
+            producto = await service.DuplicarProductoAsync(id, CodigoSolicitante, request, ct);
+
+            foreach (var imagenOriginal in imagenesOriginales)
+            {
+                var extension = ObtenerExtensionImagen(imagenOriginal.TipoContenido);
+                var claveNueva = $"{imagenOriginal.Tipo.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}{extension}";
+                var contenidoOriginal = await almacenamientoImagenes.AbrirLecturaAsync(imagenOriginal.ClaveAlmacenamiento, ct);
+                if (contenidoOriginal is null)
+                {
+                    throw new ValidacionException(new Dictionary<string, string[]>
+                    {
+                        ["imagen"] = ["No se pudo copiar una imagen del subpedido original."]
+                    });
+                }
+
+                await using (contenidoOriginal)
+                {
+                    await almacenamientoImagenes.GuardarAsync(claveNueva, contenidoOriginal, ct);
+                }
+
+                clavesCreadas.Add(claveNueva);
+                await service.GuardarImagenAsync(
+                    producto.Id,
+                    imagenOriginal.Tipo,
+                    new GuardarImagenProductoPedidoRequest(
+                        claveNueva,
+                        imagenOriginal.NombreOriginal,
+                        imagenOriginal.TipoContenido,
+                        imagenOriginal.TamanoBytes),
+                    ct);
+            }
+        }
+        catch
+        {
+            foreach (var clave in clavesCreadas)
+            {
+                await almacenamientoImagenes.EliminarAsync(clave, ct);
+            }
+
+            if (producto is not null)
+            {
+                await service.EliminarProductoAsync(producto.Id, ct);
+            }
+
+            throw;
+        }
+
+        await NotificarAsync(ct);
+        return Created(
+            $"api/pedidos/productos/{producto.Id}",
+            producto with
+            {
+                TieneImagenFabrica = imagenesOriginales.Any(x => x.Tipo == TipoImagenProductoPedido.Fabrica),
+                TieneImagenProductoTerminado = imagenesOriginales.Any(x => x.Tipo == TipoImagenProductoPedido.ProductoTerminado)
+            });
+    }
     [HttpDelete("productos/{id:guid}")]
     public async Task<IActionResult> EliminarProducto(Guid id, CancellationToken ct)
     {
@@ -77,7 +143,7 @@ public sealed class PedidosController(
         return Ok(enviado);
     }
 
-    [HttpPut("productos/{id:guid}/imagenes/{tipo}"), RequestSizeLimit(TamanoMaximoImagen)]
+    [HttpPut("productos/{id:guid}/imagenes/{tipo}"), RequestSizeLimit(ImagenesUploadLimits.MaxRequestBodyBytes)]
     [Consumes("multipart/form-data")]
     public Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagen(Guid id, string tipo, [FromForm] SubirImagenProductoRequest request, CancellationToken ct) => GuardarImagenInterna(id, ConvertirTipo(tipo), request, ct);
 
@@ -88,7 +154,7 @@ public sealed class PedidosController(
     public Task<IActionResult> EliminarImagen(Guid id, string tipo, CancellationToken ct) => EliminarImagenInterna(id, ConvertirTipo(tipo), ct);
 
     // Compatibilidad: la ruta anterior representa la imagen de producto terminado.
-    [HttpPut("productos/{id:guid}/imagen"), RequestSizeLimit(TamanoMaximoImagen)]
+    [HttpPut("productos/{id:guid}/imagen"), RequestSizeLimit(ImagenesUploadLimits.MaxRequestBodyBytes)]
     [Consumes("multipart/form-data")]
     public Task<ActionResult<ProductoPedidoImagenResponse>> GuardarImagenTerminada(Guid id, [FromForm] SubirImagenProductoRequest request, CancellationToken ct) => GuardarImagenInterna(id, TipoImagenProductoPedido.ProductoTerminado, request, ct);
 
@@ -152,7 +218,7 @@ public sealed class PedidosController(
     private static async Task<ImagenValidada> ValidarImagenAsync(IFormFile? imagen, CancellationToken ct)
     {
         if (imagen is null || imagen.Length == 0) throw new ValidacionException(new Dictionary<string, string[]> { ["imagen"] = ["Selecciona una imagen."] });
-        if (imagen.Length > TamanoMaximoImagen) throw new ValidacionException(new Dictionary<string, string[]> { ["imagen"] = ["La imagen no puede superar 15 MB."] });
+        if (imagen.Length > ImagenesUploadLimits.MaxFileBytes) throw new ValidacionException(new Dictionary<string, string[]> { ["imagen"] = ["La imagen no puede superar 15 MB."] });
         await using var temporal = new MemoryStream();
         await imagen.CopyToAsync(temporal, ct);
         var datos = temporal.ToArray();
@@ -169,6 +235,16 @@ public sealed class PedidosController(
         return null;
     }
 
+    private static string ObtenerExtensionImagen(string tipoContenido) => tipoContenido.ToLowerInvariant() switch
+    {
+        "image/jpeg" => ".jpg",
+        "image/png" => ".png",
+        "image/webp" => ".webp",
+        _ => throw new ValidacionException(new Dictionary<string, string[]>
+        {
+            ["imagen"] = ["La imagen original tiene un formato no permitido."]
+        })
+    };
     private static string CrearHtmlProducto(ProductoPedidoResponse producto, string origen, string receptor)
     {
         var encoder = HtmlEncoder.Default;

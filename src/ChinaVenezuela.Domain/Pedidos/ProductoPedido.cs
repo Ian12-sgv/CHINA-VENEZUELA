@@ -27,6 +27,8 @@ public sealed class ProductoPedido
         int? cantidadUnidades,
         string? marcaBulto,
         int? cantidadBulto,
+        DateOnly fechaRegistroPedido,
+        DateOnly? fechaInicioFabricacion,
         string creadoPorCodigoUsuario,
         DateTimeOffset ahoraUtc)
     {
@@ -47,6 +49,8 @@ public sealed class ProductoPedido
         CantidadUnidades = cantidadUnidades;
         MarcaBulto = marcaBulto;
         CantidadBulto = cantidadBulto;
+        FechaRegistroPedido = fechaRegistroPedido;
+        FechaInicioFabricacion = fechaInicioFabricacion;
         CreadoPorCodigoUsuario = creadoPorCodigoUsuario;
         FechaCreacionUtc = ahoraUtc;
         Activo = true;
@@ -68,7 +72,9 @@ public sealed class ProductoPedido
         int? packPorCaja,
         int? cantidadUnidades,
         string? marcaBulto,
-        int? cantidadBulto)
+        int? cantidadBulto,
+        DateOnly fechaRegistroPedido,
+        DateOnly? fechaInicioFabricacion)
     {
         CodigoBarraAsignado = codigoBarraAsignado;
         PrecioRmb = precioRmb;
@@ -86,6 +92,8 @@ public sealed class ProductoPedido
         CantidadUnidades = cantidadUnidades;
         MarcaBulto = marcaBulto;
         CantidadBulto = cantidadBulto;
+    FechaRegistroPedido = fechaRegistroPedido;
+        FechaInicioFabricacion = fechaInicioFabricacion;
     }
 
     public void MarcarComoEnviado(DateTimeOffset fechaEnvioUtc) { Enviado = true; FechaEnvioUtc = fechaEnvioUtc; }
@@ -107,6 +115,8 @@ public sealed class ProductoPedido
     public int? CantidadUnidades { get; private set; }
     public string? MarcaBulto { get; private set; }
     public int? CantidadBulto { get; private set; }
+    public DateOnly FechaRegistroPedido { get; private set; }
+    public DateOnly? FechaInicioFabricacion { get; private set; }
     public bool Activo { get; private set; }
     public bool Enviado { get; private set; }
     public DateTimeOffset? FechaEnvioUtc { get; private set; }
