@@ -9,11 +9,11 @@ public sealed class PedidosRepository(ChinaVenezuelaDbContext context) : IPedido
 {
     public async Task<(IReadOnlyList<ProductoPedido> Items, int Total)> ObtenerProductosAsync(string? busqueda, bool? enviado, Guid? pedidoId, int pagina, int tamanoPagina, CancellationToken ct)
     {
-        var query = context.ProductosPedido.AsNoTracking().Include(x => x.Imagenes).Include(x => x.GrupoPedido).ThenInclude(x => x!.Pedido).AsQueryable();
+        var query = context.ProductosPedido.AsNoTracking().Include(x => x.Imagenes).Include(x => x.Bultos).ThenInclude(x => x.MarcaBulto).Include(x => x.GrupoPedido).ThenInclude(x => x!.Pedido).AsQueryable();
         if (!string.IsNullOrWhiteSpace(busqueda))
         {
             var patron = $"%{busqueda.Trim()}%";
-            query = query.Where(x => EF.Functions.ILike(x.CodigoBarraAsignado, patron) || EF.Functions.ILike(x.ReferenciaAsignada, patron) || (x.TipoProducto != null && EF.Functions.ILike(x.TipoProducto, patron)) || (x.Agente != null && EF.Functions.ILike(x.Agente, patron)) || (x.Fabrica != null && EF.Functions.ILike(x.Fabrica, patron)) || (x.ComposicionTela != null && EF.Functions.ILike(x.ComposicionTela, patron)) || (x.ColorParaFabricar != null && EF.Functions.ILike(x.ColorParaFabricar, patron)) || (x.MarcaProducto != null && EF.Functions.ILike(x.MarcaProducto, patron)) || (x.CurvaTalla != null && EF.Functions.ILike(x.CurvaTalla, patron)) || (x.MarcaBulto != null && EF.Functions.ILike(x.MarcaBulto, patron)) || (x.GrupoPedido != null && EF.Functions.ILike(x.GrupoPedido.Pedido.Nombre, patron)));
+            query = query.Where(x => EF.Functions.ILike(x.CodigoBarraAsignado, patron) || EF.Functions.ILike(x.ReferenciaAsignada, patron) || (x.TipoProducto != null && EF.Functions.ILike(x.TipoProducto, patron)) || (x.Agente != null && EF.Functions.ILike(x.Agente, patron)) || (x.Fabrica != null && EF.Functions.ILike(x.Fabrica, patron)) || (x.ComposicionTela != null && EF.Functions.ILike(x.ComposicionTela, patron)) || (x.ColorParaFabricar != null && EF.Functions.ILike(x.ColorParaFabricar, patron)) || (x.MarcaProducto != null && EF.Functions.ILike(x.MarcaProducto, patron)) || (x.CurvaTalla != null && EF.Functions.ILike(x.CurvaTalla, patron)) || (x.Bultos.Any(bulto => EF.Functions.ILike(bulto.MarcaBulto.Nombre, patron))) || (x.GrupoPedido != null && EF.Functions.ILike(x.GrupoPedido.Pedido.Nombre, patron)));
         }
         if (enviado is not null) query = query.Where(x => x.Enviado == enviado.Value);
         if (pedidoId is not null) query = query.Where(x => x.GrupoPedido != null && x.GrupoPedido.PedidoId == pedidoId.Value);
@@ -23,7 +23,8 @@ public sealed class PedidosRepository(ChinaVenezuelaDbContext context) : IPedido
     }
 
     public Task<ProductoPedido?> ObtenerPorCodigoBarraAsignadoAsync(string codigoBarraAsignado, CancellationToken ct) => context.ProductosPedido.SingleOrDefaultAsync(x => x.CodigoBarraAsignado == codigoBarraAsignado, ct);
-    public Task<ProductoPedido?> ObtenerPorIdAsync(Guid id, CancellationToken ct) => context.ProductosPedido.Include(x => x.Imagenes).Include(x => x.GrupoPedido).ThenInclude(x => x!.Pedido).SingleOrDefaultAsync(x => x.Id == id, ct);
+    public Task<ProductoPedido?> ObtenerPorIdAsync(Guid id, CancellationToken ct) => context.ProductosPedido.Include(x => x.Imagenes).Include(x => x.Bultos).ThenInclude(x => x.MarcaBulto).Include(x => x.GrupoPedido).ThenInclude(x => x!.Pedido).SingleOrDefaultAsync(x => x.Id == id, ct);
+    public async Task<bool> ExistenMarcasBultoAsync(IReadOnlyList<Guid> marcaBultoIds, CancellationToken ct) => await context.MarcasBultos.CountAsync(x => marcaBultoIds.Contains(x.Id), ct) == marcaBultoIds.Distinct().Count();
     public Task<IReadOnlyList<AgentePedido>> ObtenerAgentesAsync(CancellationToken ct) => context.AgentesPedido.AsNoTracking().OrderBy(x => x.Nombre).ToListAsync(ct).ContinueWith(x => (IReadOnlyList<AgentePedido>)x.Result, ct);
     public Task<AgentePedido?> ObtenerAgentePorIdAsync(Guid id, CancellationToken ct) => context.AgentesPedido.SingleOrDefaultAsync(x => x.Id == id, ct);
     public Task<AgentePedido?> ObtenerAgentePorNombreAsync(string nombre, CancellationToken ct) => context.AgentesPedido.SingleOrDefaultAsync(x => EF.Functions.ILike(x.Nombre, nombre), ct);
@@ -31,6 +32,8 @@ public sealed class PedidosRepository(ChinaVenezuelaDbContext context) : IPedido
     public Task<Pedido?> ObtenerPedidoPorIdAsync(Guid id, CancellationToken ct) => context.Pedidos.SingleOrDefaultAsync(x => x.Id == id, ct);
     public Task<PedidoGrupo?> ObtenerGrupoPorProductoIdAsync(Guid productoPedidoId, CancellationToken ct) => context.PedidosGrupos.Include(x => x.Pedido).SingleOrDefaultAsync(x => x.ProductoPedidoId == productoPedidoId, ct);
     public Task AgregarProductoAsync(ProductoPedido producto, CancellationToken ct) => context.ProductosPedido.AddAsync(producto, ct).AsTask();
+    public Task AgregarBultoAsync(ProductoPedidoBulto bulto, CancellationToken ct) => context.ProductosPedidoBultos.AddAsync(bulto, ct).AsTask();
+    public void EliminarBulto(ProductoPedidoBulto bulto) => context.ProductosPedidoBultos.Remove(bulto);
     public Task AgregarPedidoAsync(Pedido pedido, CancellationToken ct) => context.Pedidos.AddAsync(pedido, ct).AsTask();
     public Task AgregarPedidoGrupoAsync(PedidoGrupo pedidoGrupo, CancellationToken ct) => context.PedidosGrupos.AddAsync(pedidoGrupo, ct).AsTask();
     public Task AgregarAgenteAsync(AgentePedido agente, CancellationToken ct) => context.AgentesPedido.AddAsync(agente, ct).AsTask();

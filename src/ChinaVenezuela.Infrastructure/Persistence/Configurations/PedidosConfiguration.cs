@@ -36,10 +36,25 @@ public sealed class ProductoPedidoConfiguration : IEntityTypeConfiguration<Produ
         builder.Property(x => x.CreadoPorCodigoUsuario).HasColumnName("creado_por_codigo_usuario").HasMaxLength(50).IsRequired();
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").IsRequired();
         builder.HasMany(x => x.Imagenes).WithOne().HasForeignKey(x => x.ProductoPedidoId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.Bultos).WithOne(x => x.ProductoPedido).HasForeignKey(x => x.ProductoPedidoId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.GrupoPedido).WithOne().HasForeignKey<PedidoGrupo>(x => x.ProductoPedidoId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
+public sealed class ProductoPedidoBultoConfiguration : IEntityTypeConfiguration<ProductoPedidoBulto>
+{
+    public void Configure(EntityTypeBuilder<ProductoPedidoBulto> builder)
+    {
+        builder.ToTable("producto_pedido_bulto");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.ProductoPedidoId).HasColumnName("producto_pedido_id").IsRequired();
+        builder.Property(x => x.MarcaBultoId).HasColumnName("marca_bulto_id").IsRequired();
+        builder.Property(x => x.Cantidad).HasColumnName("cantidad").IsRequired();
+        builder.HasIndex(x => new { x.ProductoPedidoId, x.MarcaBultoId }).IsUnique();
+        builder.HasOne(x => x.MarcaBulto).WithMany().HasForeignKey(x => x.MarcaBultoId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
 public sealed class ProductoPedidoImagenConfiguration : IEntityTypeConfiguration<ProductoPedidoImagen>
 {
     public void Configure(EntityTypeBuilder<ProductoPedidoImagen> builder)

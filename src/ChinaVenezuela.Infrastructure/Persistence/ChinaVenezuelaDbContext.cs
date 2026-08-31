@@ -23,6 +23,7 @@ public sealed class ChinaVenezuelaDbContext(DbContextOptions<ChinaVenezuelaDbCon
     public DbSet<Grupo> Grupos => Set<Grupo>();
     public DbSet<ProductoPedido> ProductosPedido => Set<ProductoPedido>();
     public DbSet<ProductoPedidoImagen> ProductosPedidoImagenes => Set<ProductoPedidoImagen>();
+    public DbSet<ProductoPedidoBulto> ProductosPedidoBultos => Set<ProductoPedidoBulto>();
     public DbSet<RegistroPrecioPedido> RegistrosPrecioPedido => Set<RegistroPrecioPedido>();
     public DbSet<AgentePedido> AgentesPedido => Set<AgentePedido>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();

@@ -137,6 +137,7 @@ China/
 | `puerto_llegada` | Puertos de llegada disponibles. |
 | `agente_pedido` | Agentes disponibles para pedidos. |
 | `producto_pedido` | Detalle de cada producto/pedido. |
+| `producto_pedido_bulto` | Marcas de bulto y cantidades asociadas a cada producto/pedido. |
 | `producto_pedido_imagen` | Metadatos de imágenes de fábrica y producto terminado. |
 | `pedidos` | Cabecera de un pedido agrupado. |
 | `pedidos_grupos` | Relación entre pedido agrupado y productos. |
@@ -154,6 +155,7 @@ contenedor_compartido ──< compra_recibida
 marca_bulto ──< compra_recibida
 
 pedidos ──< pedidos_grupos >── producto_pedido ──< producto_pedido_imagen
+                                      └──< producto_pedido_bulto >── marca_bulto
 usuario ──< producto_pedido (creado_por_codigo_usuario)
 ```
 
@@ -170,7 +172,7 @@ usuario ──< producto_pedido (creado_por_codigo_usuario)
 - Curva de talla.
 - Pack por cajas.
 - Cantidad de unidades.
-- Marca y cantidad de bulto.
+- Una o varias marcas de bulto, cada una con su cantidad.
 - Imagen del producto terminado.
 - Referencia asignada.
 - Código de barra asignado.

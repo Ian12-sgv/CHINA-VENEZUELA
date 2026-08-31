@@ -19,7 +19,7 @@ public sealed class CatalogoRepository(ChinaVenezuelaDbContext context) : ICatal
     public Task<bool> ExisteMarcaBultoConNombreAsync(string nombre, Guid? excluirId, CancellationToken ct) => context.MarcasBultos.AnyAsync(x => x.Nombre == nombre && (!excluirId.HasValue || x.Id != excluirId), ct);
     public Task AgregarMarcaBultoAsync(MarcaBulto marca, CancellationToken ct) => context.MarcasBultos.AddAsync(marca, ct).AsTask();
     public void EliminarMarcaBulto(MarcaBulto marca) => context.MarcasBultos.Remove(marca);
-    public Task<bool> MarcaBultoEstaEnUsoAsync(Guid id, CancellationToken ct) => context.ComprasRecibidas.AnyAsync(x => x.MarcaBultoId == id, ct);
+    public async Task<bool> MarcaBultoEstaEnUsoAsync(Guid id, CancellationToken ct) => await context.ComprasRecibidas.AnyAsync(x => x.MarcaBultoId == id, ct) || await context.ProductosPedidoBultos.AnyAsync(x => x.MarcaBultoId == id, ct);
     public Task<IReadOnlyList<ContenedorCompartido>> ObtenerContenedoresCompartidosAsync(CancellationToken ct) => ToReadOnly(context.ContenedoresCompartidos.AsNoTracking().OrderBy(x => x.Nombre), ct);
     public Task<ContenedorCompartido?> ObtenerContenedorCompartidoAsync(Guid id, CancellationToken ct) => context.ContenedoresCompartidos.SingleOrDefaultAsync(x => x.Id == id, ct);
     public Task<bool> ExisteContenedorCompartidoConNombreAsync(string nombre, Guid? excluirId, CancellationToken ct) => context.ContenedoresCompartidos.AnyAsync(x => x.Nombre == nombre && (!excluirId.HasValue || x.Id != excluirId), ct);

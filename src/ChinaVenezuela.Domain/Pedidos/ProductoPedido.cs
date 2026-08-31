@@ -1,3 +1,5 @@
+using ChinaVenezuela.Domain.Catalogos;
+
 namespace ChinaVenezuela.Domain.Pedidos;
 
 public enum TipoImagenProductoPedido
@@ -123,6 +125,7 @@ public sealed class ProductoPedido
     public string CreadoPorCodigoUsuario { get; private set; } = null!;
     public DateTimeOffset FechaCreacionUtc { get; private set; }
     public List<ProductoPedidoImagen> Imagenes { get; } = [];
+    public List<ProductoPedidoBulto> Bultos { get; } = [];
     public PedidoGrupo? GrupoPedido { get; private set; }
 }
 public sealed class ProductoPedidoImagen
@@ -143,6 +146,25 @@ public sealed class ProductoPedidoImagen
     public DateTimeOffset? FechaActualizacionUtc { get; private set; }
 }
 
+public sealed class ProductoPedidoBulto
+{
+    private ProductoPedidoBulto() { }
+    public ProductoPedidoBulto(Guid productoPedidoId, Guid marcaBultoId, int cantidad)
+    {
+        Id = Guid.NewGuid();
+        ProductoPedidoId = productoPedidoId;
+        MarcaBultoId = marcaBultoId;
+        Cantidad = cantidad;
+    }
+
+    public Guid Id { get; private set; }
+    public Guid ProductoPedidoId { get; private set; }
+    public Guid MarcaBultoId { get; private set; }
+    public int Cantidad { get; private set; }
+    public MarcaBulto MarcaBulto { get; private set; } = null!;
+    public ProductoPedido ProductoPedido { get; private set; } = null!;
+    public void ActualizarCantidad(int cantidad) => Cantidad = cantidad;
+}
 public sealed class RegistroPrecioPedido
 {
     private RegistroPrecioPedido() { }

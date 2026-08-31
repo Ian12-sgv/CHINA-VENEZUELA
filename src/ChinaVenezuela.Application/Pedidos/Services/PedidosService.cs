@@ -45,34 +45,55 @@ public sealed class PedidosService(IPedidosRepository repository, TimeProvider t
 
     public async Task<ProductoPedidoResponse> CrearProductoAsync(string codigoUsuario, CrearProductoPedidoRequest request, CancellationToken ct)
     {
-        Validar(request.CodigoBarraAsignado, request.ReferenciaAsignada, request.TipoProducto, request.PackPorCaja, request.CantidadUnidades, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.MarcaBulto, request.CantidadBulto, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        Validar(request.CodigoBarraAsignado, request.ReferenciaAsignada, request.TipoProducto, request.PackPorCaja, request.CantidadUnidades, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.Bultos, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        await ValidarMarcasBultoAsync(request.Bultos, ct);
         var codigo = request.CodigoBarraAsignado.Trim();
         if (await repository.ObtenerPorCodigoBarraAsignadoAsync(codigo, ct) is not null) Duplicado();
-        var producto = new ProductoPedido(codigo, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.ReferenciaAsignada.Trim(), Limpiar(request.TipoProducto), Limpiar(request.Agente), Limpiar(request.Fabrica), Limpiar(request.ComposicionTela), Limpiar(request.ColorParaFabricar), Limpiar(request.MarcaProducto), Limpiar(request.CurvaTalla), request.PackPorCaja, request.CantidadUnidades, Limpiar(request.MarcaBulto), request.CantidadBulto, request.FechaRegistroPedido, request.FechaInicioFabricacion, codigoUsuario, timeProvider.GetUtcNow());
+        var producto = new ProductoPedido(codigo, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.ReferenciaAsignada.Trim(), Limpiar(request.TipoProducto), Limpiar(request.Agente), Limpiar(request.Fabrica), Limpiar(request.ComposicionTela), Limpiar(request.ColorParaFabricar), Limpiar(request.MarcaProducto), Limpiar(request.CurvaTalla), request.PackPorCaja, request.CantidadUnidades, null, null, request.FechaRegistroPedido, request.FechaInicioFabricacion, codigoUsuario, timeProvider.GetUtcNow());
+        foreach (var bulto in request.Bultos ?? []) producto.Bultos.Add(new ProductoPedidoBulto(producto.Id, bulto.MarcaBultoId, bulto.Cantidad));
         await repository.AgregarProductoAsync(producto, ct);
         var pedido = await ResolverPedidoAsync(request.PedidoId, request.NombreNuevoGrupo, codigoUsuario, ct);
         await repository.AgregarPedidoGrupoAsync(new PedidoGrupo(pedido.Id, producto.Id, timeProvider.GetUtcNow()), ct);
         await repository.GuardarCambiosAsync(ct);
-        return Map(producto, pedido);
+        return await ObtenerProductoAsync(producto.Id, ct);
     }
 
     public async Task<ProductoPedidoResponse> ObtenerProductoAsync(Guid id, CancellationToken ct) => Map(await ObtenerEntidadAsync(id, ct));
 
     public async Task<ProductoPedidoResponse> ActualizarProductoAsync(Guid id, string codigoUsuario, ActualizarProductoPedidoRequest request, CancellationToken ct)
     {
-        Validar(request.CodigoBarraAsignado, request.ReferenciaAsignada, request.TipoProducto, request.PackPorCaja, request.CantidadUnidades, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.MarcaBulto, request.CantidadBulto, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        Validar(request.CodigoBarraAsignado, request.ReferenciaAsignada, request.TipoProducto, request.PackPorCaja, request.CantidadUnidades, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.Bultos, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        await ValidarMarcasBultoAsync(request.Bultos, ct);
         var producto = await ObtenerEntidadAsync(id, ct);
         if (producto.Enviado) Bloqueado();
         var codigo = request.CodigoBarraAsignado.Trim();
         var duplicado = await repository.ObtenerPorCodigoBarraAsignadoAsync(codigo, ct);
         if (duplicado is not null && duplicado.Id != id) Duplicado();
-        producto.Actualizar(codigo, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.ReferenciaAsignada.Trim(), Limpiar(request.TipoProducto), Limpiar(request.Agente), Limpiar(request.Fabrica), Limpiar(request.ComposicionTela), Limpiar(request.ColorParaFabricar), Limpiar(request.MarcaProducto), Limpiar(request.CurvaTalla), request.PackPorCaja, request.CantidadUnidades, Limpiar(request.MarcaBulto), request.CantidadBulto, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        producto.Actualizar(codigo, request.PrecioRmb, request.TotalRmb, request.CantidadDoz, request.ReferenciaAsignada.Trim(), Limpiar(request.TipoProducto), Limpiar(request.Agente), Limpiar(request.Fabrica), Limpiar(request.ComposicionTela), Limpiar(request.ColorParaFabricar), Limpiar(request.MarcaProducto), Limpiar(request.CurvaTalla), request.PackPorCaja, request.CantidadUnidades, null, null, request.FechaRegistroPedido, request.FechaInicioFabricacion);
+        var bultosSolicitados = request.Bultos ?? [];
+        var marcasSolicitadas = bultosSolicitados.Select(x => x.MarcaBultoId).ToHashSet();
+        foreach (var bultoActual in producto.Bultos.Where(x => !marcasSolicitadas.Contains(x.MarcaBultoId)).ToArray())
+        {
+            producto.Bultos.Remove(bultoActual);
+            repository.EliminarBulto(bultoActual);
+        }
+        foreach (var bultoSolicitado in bultosSolicitados)
+        {
+            var bultoActual = producto.Bultos.SingleOrDefault(x => x.MarcaBultoId == bultoSolicitado.MarcaBultoId);
+            if (bultoActual is not null) bultoActual.ActualizarCantidad(bultoSolicitado.Cantidad);
+            else
+            {
+                var nuevoBulto = new ProductoPedidoBulto(producto.Id, bultoSolicitado.MarcaBultoId, bultoSolicitado.Cantidad);
+                producto.Bultos.Add(nuevoBulto);
+                await repository.AgregarBultoAsync(nuevoBulto, ct);
+            }
+        }
         var pedido = await ResolverPedidoAsync(request.PedidoId, request.NombreNuevoGrupo, codigoUsuario, ct);
         var detalle = await repository.ObtenerGrupoPorProductoIdAsync(id, ct);
         if (detalle is null) await repository.AgregarPedidoGrupoAsync(new PedidoGrupo(pedido.Id, id, timeProvider.GetUtcNow()), ct);
         else if (detalle.PedidoId != pedido.Id) detalle.CambiarPedido(pedido.Id);
         await repository.GuardarCambiosAsync(ct);
-        return Map(producto, pedido);
+        return await ObtenerProductoAsync(producto.Id, ct);
     }
 
     public async Task<ProductoPedidoResponse> DuplicarProductoAsync(Guid id, string codigoUsuario, DuplicarProductoPedidoRequest request, CancellationToken ct)
@@ -99,19 +120,22 @@ public sealed class PedidosService(IPedidosRepository repository, TimeProvider t
             productoOriginal.CurvaTalla,
             productoOriginal.PackPorCaja,
             productoOriginal.CantidadUnidades,
-            productoOriginal.MarcaBulto,
-            productoOriginal.CantidadBulto,
+            null,
+            null,
             productoOriginal.FechaRegistroPedido,
             productoOriginal.FechaInicioFabricacion,
             codigoUsuario,
             timeProvider.GetUtcNow());
+
+        foreach (var bulto in productoOriginal.Bultos) duplicado.Bultos.Add(new ProductoPedidoBulto(duplicado.Id, bulto.MarcaBultoId, bulto.Cantidad));
 
         var pedido = await repository.ObtenerPedidoPorIdAsync(detalle.PedidoId, ct) ?? throw new RecursoNoEncontradoException("Grupo de pedido", detalle.PedidoId);
 
         await repository.AgregarProductoAsync(duplicado, ct);
         await repository.AgregarPedidoGrupoAsync(new PedidoGrupo(pedido.Id, duplicado.Id, timeProvider.GetUtcNow()), ct);
         await repository.GuardarCambiosAsync(ct);
-        return Map(duplicado, pedido);
+        var respuesta = await ObtenerProductoAsync(duplicado.Id, ct);
+        return respuesta with { PedidoId = pedido.Id, GrupoPedidoNombre = pedido.Nombre };
     }
     public async Task EliminarProductoAsync(Guid id, CancellationToken ct)
     {
@@ -191,7 +215,13 @@ public sealed class PedidosService(IPedidosRepository repository, TimeProvider t
         if (codigo.Length > 100) throw new ValidacionException(new Dictionary<string, string[]> { ["codigoBarraAsignado"] = ["El código de barra asignado no puede superar 100 caracteres."] });
         return codigo;
     }
-    private static void Validar(string codigoBarraAsignado, string referenciaAsignada, string? tipoProducto, int? packPorCaja, int? cantidadUnidades, decimal? precioRmb, decimal? totalRmb, int? cantidadDoz, string? marcaBulto, int? cantidadBulto, DateOnly fechaRegistroPedido, DateOnly? fechaInicioFabricacion)
+    private async Task ValidarMarcasBultoAsync(IReadOnlyList<BultoProductoPedidoRequest>? bultos, CancellationToken ct)
+    {
+        if (bultos is not { Count: > 0 }) return;
+        if (!await repository.ExistenMarcasBultoAsync(bultos.Select(x => x.MarcaBultoId).ToArray(), ct))
+            throw new ValidacionException(new Dictionary<string, string[]> { ["bultos"] = ["Una o más marcas de bulto no existen."] });
+    }
+    private static void Validar(string codigoBarraAsignado, string referenciaAsignada, string? tipoProducto, int? packPorCaja, int? cantidadUnidades, decimal? precioRmb, decimal? totalRmb, int? cantidadDoz, IReadOnlyList<BultoProductoPedidoRequest>? bultos, DateOnly fechaRegistroPedido, DateOnly? fechaInicioFabricacion)
     {
         var errores = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(codigoBarraAsignado)) errores["codigoBarraAsignado"] = ["El código de barra asignado es obligatorio."];
@@ -202,13 +232,18 @@ public sealed class PedidosService(IPedidosRepository repository, TimeProvider t
         if (precioRmb is < 0) errores["precioRmb"] = ["El precio RMB no puede ser negativo."];
         if (totalRmb is < 0) errores["totalRmb"] = ["El total RMB no puede ser negativo."];
         if (cantidadDoz is <= 0) errores["cantidadDoz"] = ["La cantidad DOZ debe ser mayor que cero."];
-        if (!string.IsNullOrWhiteSpace(marcaBulto) && cantidadBulto is not > 0) errores["cantidadBulto"] = ["Indica una cantidad de bultos mayor que cero para la marca seleccionada."];
-        if (string.IsNullOrWhiteSpace(marcaBulto) && cantidadBulto.HasValue) errores["marcaBulto"] = ["Selecciona una marca de bulto para indicar su cantidad."];
+        if (bultos is null) errores["bultos"] = ["Indica las marcas de bulto del pedido."];
+        else
+        {
+            if (bultos.Any(x => x.MarcaBultoId == Guid.Empty)) errores["bultos"] = ["Selecciona una marca de bulto valida."];
+            if (bultos.Any(x => x.Cantidad <= 0)) errores["bultos"] = ["La cantidad de cada marca de bulto debe ser mayor que cero."];
+            if (bultos.GroupBy(x => x.MarcaBultoId).Any(x => x.Count() > 1)) errores["bultos"] = ["No repitas una marca de bulto en el mismo pedido."];
+        }
         if (fechaRegistroPedido == default) errores["fechaRegistroPedido"] = ["La fecha de registro del pedido es obligatoria."];
         if (fechaInicioFabricacion is not null && fechaInicioFabricacion < fechaRegistroPedido) errores["fechaInicioFabricacion"] = ["La fecha de inicio de fabricación no puede ser anterior al registro del pedido."];
         if (errores.Count > 0) throw new ValidacionException(errores);
     }
     private static string? Limpiar(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static ProductoPedidoResponse Map(ProductoPedido x, Pedido? pedido = null) => new(x.Id, pedido?.Id ?? x.GrupoPedido?.PedidoId, pedido?.Nombre ?? x.GrupoPedido?.Pedido.Nombre, x.CodigoBarraAsignado, x.PrecioRmb, x.TotalRmb, x.CantidadDoz, x.ReferenciaAsignada, x.TipoProducto, x.Agente, x.Fabrica, x.ComposicionTela, x.ColorParaFabricar, x.MarcaProducto, x.CurvaTalla, x.PackPorCaja, x.CantidadUnidades, x.MarcaBulto, x.CantidadBulto, x.FechaRegistroPedido, x.FechaInicioFabricacion, x.Activo, x.Enviado, x.FechaEnvioUtc, x.Imagenes.Any(i => i.Tipo == TipoImagenProductoPedido.Fabrica), x.Imagenes.Any(i => i.Tipo == TipoImagenProductoPedido.ProductoTerminado), x.CreadoPorCodigoUsuario, x.FechaCreacionUtc);
+    private static ProductoPedidoResponse Map(ProductoPedido x, Pedido? pedido = null) => new(x.Id, pedido?.Id ?? x.GrupoPedido?.PedidoId, pedido?.Nombre ?? x.GrupoPedido?.Pedido.Nombre, x.CodigoBarraAsignado, x.PrecioRmb, x.TotalRmb, x.CantidadDoz, x.ReferenciaAsignada, x.TipoProducto, x.Agente, x.Fabrica, x.ComposicionTela, x.ColorParaFabricar, x.MarcaProducto, x.CurvaTalla, x.PackPorCaja, x.CantidadUnidades, x.MarcaBulto, x.CantidadBulto, x.Bultos.OrderBy(bulto => bulto.MarcaBulto.Nombre).Select(bulto => new BultoProductoPedidoResponse(bulto.MarcaBultoId, bulto.MarcaBulto.Nombre, bulto.Cantidad)).ToArray(), x.FechaRegistroPedido, x.FechaInicioFabricacion, x.Activo, x.Enviado, x.FechaEnvioUtc, x.Imagenes.Any(i => i.Tipo == TipoImagenProductoPedido.Fabrica), x.Imagenes.Any(i => i.Tipo == TipoImagenProductoPedido.ProductoTerminado), x.CreadoPorCodigoUsuario, x.FechaCreacionUtc);
     private static ProductoPedidoImagenResponse? Map(ProductoPedidoImagen? x) => x is null ? null : new(x.Id, x.ProductoPedidoId, x.Tipo, x.ClaveAlmacenamiento, x.NombreOriginal, x.TipoContenido, x.TamanoBytes, x.FechaCreacionUtc, x.FechaActualizacionUtc);
 }

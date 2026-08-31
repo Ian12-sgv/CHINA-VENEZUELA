@@ -7,6 +7,7 @@ public interface IPedidosRepository
     Task<(IReadOnlyList<ProductoPedido> Items, int Total)> ObtenerProductosAsync(string? busqueda, bool? enviado, Guid? pedidoId, int pagina, int tamanoPagina, CancellationToken ct);
     Task<ProductoPedido?> ObtenerPorCodigoBarraAsignadoAsync(string codigoBarraAsignado, CancellationToken ct);
     Task<ProductoPedido?> ObtenerPorIdAsync(Guid id, CancellationToken ct);
+    Task<bool> ExistenMarcasBultoAsync(IReadOnlyList<Guid> marcaBultoIds, CancellationToken ct);
     Task<IReadOnlyList<AgentePedido>> ObtenerAgentesAsync(CancellationToken ct);
     Task<AgentePedido?> ObtenerAgentePorIdAsync(Guid id, CancellationToken ct);
     Task<AgentePedido?> ObtenerAgentePorNombreAsync(string nombre, CancellationToken ct);
@@ -14,6 +15,8 @@ public interface IPedidosRepository
     Task<Pedido?> ObtenerPedidoPorIdAsync(Guid id, CancellationToken ct);
     Task<PedidoGrupo?> ObtenerGrupoPorProductoIdAsync(Guid productoPedidoId, CancellationToken ct);
     Task AgregarProductoAsync(ProductoPedido producto, CancellationToken ct);
+    Task AgregarBultoAsync(ProductoPedidoBulto bulto, CancellationToken ct);
+    void EliminarBulto(ProductoPedidoBulto bulto);
     Task AgregarPedidoAsync(Pedido pedido, CancellationToken ct);
     Task AgregarPedidoGrupoAsync(PedidoGrupo pedidoGrupo, CancellationToken ct);
     Task AgregarAgenteAsync(AgentePedido agente, CancellationToken ct);

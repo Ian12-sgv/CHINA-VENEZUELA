@@ -60,6 +60,7 @@ public sealed class PedidosServiceTests
         public Task<(IReadOnlyList<ProductoPedido> Items, int Total)> ObtenerProductosAsync(string? busqueda, bool? enviado, Guid? pedidoId, int pagina, int tamanoPagina, CancellationToken ct) => Task.FromResult<(IReadOnlyList<ProductoPedido>, int)>((Productos, Productos.Count));
         public Task<ProductoPedido?> ObtenerPorCodigoBarraAsignadoAsync(string codigo, CancellationToken ct) => Task.FromResult<ProductoPedido?>(Productos.SingleOrDefault(x => x.CodigoBarraAsignado == codigo));
         public Task<ProductoPedido?> ObtenerPorIdAsync(Guid id, CancellationToken ct) => Task.FromResult<ProductoPedido?>(Productos.SingleOrDefault(x => x.Id == id));
+        public Task<bool> ExistenMarcasBultoAsync(IReadOnlyList<Guid> marcaBultoIds, CancellationToken ct) => Task.FromResult(true);
         public Task<IReadOnlyList<AgentePedido>> ObtenerAgentesAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<AgentePedido>>([]);
         public Task<AgentePedido?> ObtenerAgentePorIdAsync(Guid id, CancellationToken ct) => Task.FromResult<AgentePedido?>(null);
         public Task<AgentePedido?> ObtenerAgentePorNombreAsync(string nombre, CancellationToken ct) => Task.FromResult<AgentePedido?>(null);
@@ -67,6 +68,8 @@ public sealed class PedidosServiceTests
         public Task<Pedido?> ObtenerPedidoPorIdAsync(Guid id, CancellationToken ct) => Task.FromResult<Pedido?>(id == Pedido.Id ? Pedido : null);
         public Task<PedidoGrupo?> ObtenerGrupoPorProductoIdAsync(Guid productoId, CancellationToken ct) => Task.FromResult<PedidoGrupo?>(Detalles.SingleOrDefault(x => x.ProductoPedidoId == productoId));
         public Task AgregarProductoAsync(ProductoPedido producto, CancellationToken ct) { Productos.Add(producto); return Task.CompletedTask; }
+        public Task AgregarBultoAsync(ProductoPedidoBulto bulto, CancellationToken ct) => Task.CompletedTask;
+        public void EliminarBulto(ProductoPedidoBulto bulto) { }
         public Task AgregarPedidoAsync(Pedido pedido, CancellationToken ct) => Task.CompletedTask;
         public Task AgregarPedidoGrupoAsync(PedidoGrupo detalle, CancellationToken ct) { Detalles.Add(detalle); return Task.CompletedTask; }
         public Task AgregarAgenteAsync(AgentePedido agente, CancellationToken ct) => Task.CompletedTask;

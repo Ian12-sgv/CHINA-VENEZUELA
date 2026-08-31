@@ -106,7 +106,7 @@ Si el envío no está configurado, revisar las variables `Resend__ApiKey` y `Res
    - Curva de talla.
    - Pack por cajas.
    - Cantidad de unidades.
-   - Marca y cantidad de bulto.
+   - Una o varias marcas de bulto, con su cantidad independiente para cada marca.
    - Imagen del producto terminado.
    - Referencia asignada.
    - Código de barra asignado.
@@ -126,7 +126,7 @@ En **Catálogo de productos** se puede:
 - Actualizar o eliminar las imágenes.
 - Marcar un producto como enviado.
 - Descargar Excel o PDF del grupo completo o de un subpedido.
-- Mostrar la marca de bulto como encabezado de columna y la cantidad debajo de su marca, tanto en catálogo como en las exportaciones.
+- Mostrar cada marca de bulto usada como encabezado de columna y su cantidad debajo, tanto en catálogo como en las exportaciones.
 
 Los documentos de exportación incluyen las imágenes y los valores monetarios en RMB/CNY (`¥`).
 
