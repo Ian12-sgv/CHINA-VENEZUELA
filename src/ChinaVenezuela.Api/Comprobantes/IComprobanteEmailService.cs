@@ -6,7 +6,10 @@ public sealed record EnvioComprobanteRequest(
     string CorreoRemitente,
     string NombreRemitente,
     string Asunto,
-    string ContenidoHtml);
+    string ContenidoHtml,
+    IReadOnlyList<ArchivoAdjuntoCorreo>? Adjuntos = null);
+
+public sealed record ArchivoAdjuntoCorreo(string NombreArchivo, byte[] Contenido);
 
 public sealed record ComprobanteEnviadoResponse(
     string Receptor,

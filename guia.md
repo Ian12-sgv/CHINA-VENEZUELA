@@ -76,14 +76,16 @@ El RIF no se puede repetir, aunque el nombre de la empresa sea diferente.
 
 El recibo aparecerá en el historial y las demás sesiones conectadas se actualizarán automáticamente.
 
+En el historial, la columna **Status** permite cambiar cada recibo entre **En proceso**, **Aprobado** y **Sin terminar**. Todos los recibos existentes comienzan en **En proceso**.
+
 ### Buscar compras
 
-El buscador del historial revisa contenedor, empresa, salida, llegada, puerto, marca y receptor.
+El buscador del historial revisa contenedor, empresa, salida, llegada, puerto, marca y receptor. El selector **Fecha llegada** muestra solo los recibos cuya fecha de llegada coincida con la seleccionada.
 
 ### Enviar comprobante
 
 1. En el historial, seleccionar **Enviar** en la columna Comprobante.
-2. El sistema envía el comprobante al correo del receptor y copia al correo del usuario que creó la compra.
+2. El sistema envía el comprobante al correo del receptor y copia al correo del usuario que creó la compra. El mismo correo incluye dos adjuntos: un Excel (`.xlsx`) y un PDF (`.pdf`) con el resumen del recibo.
 3. Al enviarse correctamente, la compra queda bloqueada para editar o eliminar.
 
 Si el envío no está configurado, revisar las variables `Resend__ApiKey` y `Resend__RemitenteCorreo` en el servidor.
@@ -334,3 +336,7 @@ Usa el agente arreglo para corregir qa/errores/error-testing-AAAA-MM-DD-HHMM-des
 ```
 
 La definición completa está en `skills/arreglo/SKILL.md`.
+
+### Rastreo
+
+La sección **Rastreo** está disponible para el grupo **Pedidos** y administradores. Durante las pruebas, puedes hacer clic en una etapa para marcarla visualmente como la actual y volver a hacer clic sobre esa misma etapa para quitar únicamente su marca verde; las etapas anteriores permanecen como completadas. La selección es temporal y no modifica la base de datos. Al cambiar de pedido, la línea de tiempo vuelve al estado calculado con los datos existentes.

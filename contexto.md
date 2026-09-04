@@ -1,7 +1,7 @@
 # Contexto técnico — Sistema China → Venezuela
 
 > Documento base para desarrollo, operación y transferencia del conocimiento.
-> Última actualización: 27 de agosto de 2026.
+> Última actualización: 3 de septiembre de 2026.
 > **Seguridad:** este archivo nunca debe contener contraseñas, cadenas de conexión completas, tokens JWT ni claves de Resend.
 
 ## 1. Ficha técnica
@@ -30,11 +30,12 @@ El sistema cubre el flujo operativo de mercancía enviada desde China hacia Vene
 
 1. Inicio de sesión y administración de usuarios.
 2. Grupos, asignación de permisos y control de acceso.
-3. Compras recibidas: registro de contenedor, empresa, fechas, puerto, aduana, marca de bulto, receptor y comprobante.
+3. Compras recibidas: registro de contenedor, empresa, fechas, puerto, aduana, marca de bulto, receptor, status operativo y comprobante.
 4. Catálogos operativos: contenedor compartido, empresas, marcas de bulto, aduanas, puertos de llegada y agentes.
 5. Pedidos / catálogo de productos: productos, grupos de pedidos, precios RMB, cantidades, imágenes y exportaciones.
-6. Envío por correo de comprobantes de compras.
-7. Auditoría de acciones relevantes.
+6. Envío por correo de comprobantes de compras, con adjuntos Excel y PDF generados en el momento.
+7. Rastreo visual de pedidos: línea de tiempo de etapas por pedido (vista informativa para el grupo `Pedidos`).
+8. Auditoría de acciones relevantes.
 
 ### Reglas de negocio relevantes
 
@@ -84,7 +85,7 @@ Infrastructure      EF Core, Npgsql, repositorios, migraciones e imágenes
 China/
 ├── frontend/                              # Aplicación React/Vite
 │   ├── src/
-│   │   ├── pages/                         # Vistas: compras, pedidos, usuarios, grupos, catálogos
+│   │   ├── pages/                         # Vistas: compras, pedidos, rastreo, usuarios, grupos, catálogos
 │   │   ├── components/                    # Componentes reutilizables
 │   │   ├── hooks/                         # SignalR y actualizaciones en tiempo real
 │   │   ├── api.ts                         # Cliente HTTP de la API
@@ -98,7 +99,7 @@ China/
 │   ├── ChinaVenezuela.Api/                # Entrada HTTP del backend
 │   │   ├── Controllers/
 │   │   ├── Auth/
-│   │   ├── Comprobantes/
+│   │   ├── Comprobantes/                  # Envío de correo y generación de adjuntos (Excel/PDF)
 │   │   ├── Hubs/
 │   │   ├── ExceptionHandling/
 │   │   ├── Program.cs
@@ -117,7 +118,7 @@ China/
 ├── actualizar-base-servidor-actual.sql    # Migración idempotente para producción
 ├── ChinaVenezuela.slnx                    # Solución .NET
 ├── README.md
-└── contexto.mb                            # Este documento
+└── contexto.md                            # Este documento
 ```
 
 ## 5. Modelo de datos
@@ -129,7 +130,7 @@ China/
 | `usuario` | Credenciales, nombre, correo, estado y metadatos de usuarios. |
 | `grupo` | Catálogo de grupos de seguridad. |
 | `grupo_usuario` | Relación entre usuario y grupo. |
-| `compra_recibida` | Recepción de mercancía, empresa, contenedor, fechas, receptor y estado de comprobante. |
+| `compra_recibida` | Recepción de mercancía, empresa, contenedor, fechas, receptor, status operativo y estado de comprobante. |
 | `empresa` | Empresas importadoras, RIF único y clasificación geográfica/aliada. |
 | `contenedor_compartido` | Opciones de contenedor compartido. |
 | `marca_bulto` | Marcas de bulto. |
@@ -201,8 +202,8 @@ https://api-china.apipalacio.com/openapi/v1.json
 | --- | --- |
 | Autenticación | `POST /api/auth/iniciar-sesion` |
 | Cuenta | `GET /api/cuenta` |
-| Compras | `GET/POST /api/compras-recibidas`, `GET/PUT/DELETE /api/compras-recibidas/{id}` |
-| Comprobantes | `POST /api/compras-recibidas/{id}/comprobante/enviar` |
+| Compras | `GET/POST /api/compras-recibidas`, `GET/PUT/DELETE /api/compras-recibidas/{id}`, `PUT /api/compras-recibidas/{id}/status` |
+| Comprobantes | `POST /api/compras-recibidas/{id}/comprobante/enviar` (envía correo vía Resend con adjuntos `.xlsx` y `.pdf` generados en el momento con ClosedXML y QuestPDF) |
 | Catálogos | CRUD en `/api/empresas`, `/api/aduanas`, `/api/puertos-llegada`, `/api/marcas-bulto`, `/api/contenedores-compartidos` |
 | Agentes | CRUD en `/api/agentes` |
 | Usuarios | CRUD y grupos en `/api/usuarios` |
@@ -323,6 +324,11 @@ caddy validate --config C:\caddy\Caddyfile --adapter caddyfile
 caddy reload --config C:\caddy\Caddyfile --adapter caddyfile
 ```
 
+### Docker (exploratorio, no es el método de despliegue actual)
+
+- `Dockerfile`: build multi-stage de la API (.NET SDK/ASP.NET Core 10) que publica y ejecuta `ChinaVenezuela.Api.dll` en el puerto 80. Es coherente con el proyecto actual.
+- `docker-compose.yml`: **desactualizado/inconsistente** respecto al resto del sistema. Define un servicio `db` con SQL Server (`mcr.microsoft.com/mssql/server`) y una variable `ConnectionStrings__DefaultConnection`, pero el backend real usa PostgreSQL y la variable `ConnectionStrings__PostgreSql` (ver sección 8). No usar este `docker-compose.yml` tal cual hasta corregirlo; el despliegue productivo real sigue siendo Netlify (frontend) + servicio Windows/Caddy (backend), como se describe arriba.
+
 ## 12. Estrategia Git
 
 | Repositorio | Uso |
@@ -394,12 +400,16 @@ Validación manual mínima:
 - Dos imágenes por producto, alojadas localmente.
 - Precio/total RMB y cantidad DOZ.
 - Exportación de pedidos a PDF y Excel.
-- Comprobantes por correo mediante Resend.
+- Comprobantes por correo mediante Resend, con adjuntos Excel/PDF.
 - Actualización en tiempo real y auditoría.
 - Publicación backend preparada en `backend-publicar-pedidos-2`.
+- Rastreo visual de pedidos (`RastreoPage`): línea de tiempo con 9 etapas fijas. La etapa actual se calcula solo con `enviado` y `fechaInicioFabricacion` (aproximación de 3 valores posibles); incluye un modo de prueba manual (clic para marcar etapa) pensado para validar el diseño, no para uso productivo todavía.
 
 ### Pendientes recomendados
 
+- Definir en el dominio las etapas reales de `producto_pedido` (o una tabla de eventos) para que el rastreo refleje el estado verdadero en vez de la aproximación actual basada en 2 campos.
+- Retirar o proteger el modo de prueba manual de `RastreoPage` antes de considerarla lista para todos los usuarios.
+- Corregir o eliminar `docker-compose.yml` (referencia SQL Server en vez de PostgreSQL; ver sección 11) si se decide adoptar Docker como método de despliegue.
 - Automatizar el inicio del backend como servicio de Windows o tarea programada supervisada.
 - Añadir pruebas de integración para permisos, carga de imágenes y migraciones.
 - Definir monitoreo de logs, uso de disco y respaldo programado.

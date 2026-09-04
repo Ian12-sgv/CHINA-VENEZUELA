@@ -101,8 +101,12 @@ export const comprasApi = {
   listar: () => request<CompraRecibida[]>('/compras-recibidas'),
   crear: (data: CompraRecibidaRequest) => request<CompraRecibida>('/compras-recibidas', { method: 'POST', body: JSON.stringify(data) }),
   actualizar: (id: string, data: CompraRecibidaRequest) => request<CompraRecibida>(`/compras-recibidas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  actualizarStatus: (id: string, status: string) => request<CompraRecibida>(`/compras-recibidas/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   eliminar: (id: string) => request<void>(`/compras-recibidas/${id}`, { method: 'DELETE' }),
   enviarComprobante: (id: string) => request<{ receptor: string; copia: string; enviadoEnUtc: string }>(`/compras-recibidas/${id}/comprobante/enviar`, { method: 'POST' }),
+  subirArchivoComprobante: (id: string, archivo: File) => { const data = new FormData(); data.append('archivo', archivo); return requestMultipart<CompraRecibida>(`/compras-recibidas/${id}/archivo-comprobante`, data) },
+  obtenerArchivoComprobante: (id: string) => obtenerImagen(`/compras-recibidas/${id}/archivo-comprobante`),
+  eliminarArchivoComprobante: (id: string) => request<void>(`/compras-recibidas/${id}/archivo-comprobante`, { method: 'DELETE' }),
 }
 
 export const empresasApi = {

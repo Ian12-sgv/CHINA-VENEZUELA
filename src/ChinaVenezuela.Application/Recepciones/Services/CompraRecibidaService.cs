@@ -39,6 +39,13 @@ public sealed class CompraRecibidaService(
         return Map(compra);
     }
 
+    public async Task<CompraRecibidaResponse> ActualizarStatusAsync(Guid id, ActualizarStatusCompraRecibidaRequest request, CancellationToken cancellationToken)
+    {
+        var compra = await FindAsync(id, cancellationToken);
+        compra.ActualizarStatus(NormalizarStatus(request.Status), timeProvider.GetUtcNow());
+        await repository.GuardarCambiosAsync(cancellationToken);
+        return Map(compra);
+    }
     public async Task EliminarAsync(Guid id, CancellationToken cancellationToken)
     {
         var compra = await FindAsync(id, cancellationToken);
@@ -53,6 +60,24 @@ public sealed class CompraRecibidaService(
         if (compra.FechaComprobanteEnviadoUtc is not null) throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["El comprobante de esta compra ya fue enviado."] });
         compra.MarcarComprobanteEnviado(timeProvider.GetUtcNow());
         await repository.GuardarCambiosAsync(cancellationToken);
+    }
+
+    public async Task<CompraRecibidaResponse> GuardarArchivoComprobanteAsync(Guid id, GuardarArchivoComprobanteCompraRequest request, CancellationToken cancellationToken)
+    {
+        var compra = await FindAsync(id, cancellationToken);
+        if (compra.FechaComprobanteEnviadoUtc is not null) throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["Una compra con comprobante enviado no puede editarse."] });
+        compra.AsignarArchivoComprobante(request.ClaveAlmacenamiento, request.NombreOriginal, request.TipoContenido, request.TamanoBytes, timeProvider.GetUtcNow());
+        await repository.GuardarCambiosAsync(cancellationToken);
+        return Map(compra);
+    }
+
+    public async Task<CompraRecibidaResponse> EliminarArchivoComprobanteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var compra = await FindAsync(id, cancellationToken);
+        if (compra.FechaComprobanteEnviadoUtc is not null) throw new ValidacionException(new Dictionary<string, string[]> { ["compra"] = ["Una compra con comprobante enviado no puede editarse."] });
+        compra.EliminarArchivoComprobante();
+        await repository.GuardarCambiosAsync(cancellationToken);
+        return Map(compra);
     }
 
     private async Task<string> ValidarRelacionesAsync(string codigoRemitente, Guid empresaId, Guid? contenedorId, Guid? marcaId, string receptorCodigoUsuario, CancellationToken ct)
@@ -75,9 +100,16 @@ public sealed class CompraRecibidaService(
     }
 
     private async Task<CompraRecibida> FindAsync(Guid id, CancellationToken ct) => await repository.ObtenerPorIdAsync(id, ct) ?? throw new RecursoNoEncontradoException("la compra recibida", id);
+    private static string NormalizarStatus(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "en proceso" => CompraRecibida.StatusEnProceso,
+        "aprobado" => CompraRecibida.StatusAprobado,
+        "sin terminar" => CompraRecibida.StatusSinTerminar,
+        _ => throw new ValidacionException(new Dictionary<string, string[]> { ["status"] = ["Selecciona En proceso, Aprobado o Sin terminar."] })
+    };
     private static string Required(string value) => value.Trim();
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static CompraRecibidaResponse Map(CompraRecibida entity) => new(entity.Id, entity.ContenedorCompartidoId, entity.NombreContenedor, entity.NumeroContenedor, entity.EmpresaId, entity.Descripcion, entity.FechaSalida, entity.FechaLlegada, entity.Aduana, entity.PuertoLlegada, entity.MarcaBultoId, entity.ReceptorCodigoUsuario, entity.Receptor?.Nombre, entity.Receptor?.Correo, entity.FechaCreacionUtc, entity.FechaActualizacionUtc, entity.FechaComprobanteEnviadoUtc);
+    private static CompraRecibidaResponse Map(CompraRecibida entity) => new(entity.Id, entity.ContenedorCompartidoId, entity.NombreContenedor, entity.NumeroContenedor, entity.EmpresaId, entity.Descripcion, entity.FechaSalida, entity.FechaLlegada, entity.Aduana, entity.PuertoLlegada, entity.MarcaBultoId, entity.ReceptorCodigoUsuario, entity.Receptor?.Nombre, entity.Receptor?.Correo, entity.Status, entity.FechaCreacionUtc, entity.FechaActualizacionUtc, entity.FechaComprobanteEnviadoUtc, entity.ClaveArchivoComprobante, entity.NombreArchivoComprobante, entity.TipoContenidoArchivoComprobante, entity.FechaCargaArchivoComprobanteUtc);
 }
 
 

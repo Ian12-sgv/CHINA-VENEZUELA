@@ -21,9 +21,15 @@ public sealed class CompraRecibidaConfiguration : IEntityTypeConfiguration<Compr
         builder.Property(x => x.Aduana).HasColumnName("aduana").HasMaxLength(200);
         builder.Property(x => x.PuertoLlegada).HasColumnName("puerto_llegada").HasMaxLength(200).IsRequired();
         builder.Property(x => x.MarcaBultoId).HasColumnName("marca_bulto_id");        builder.Property(x => x.ReceptorCodigoUsuario).HasColumnName("receptor_codigo_usuario").HasMaxLength(50);
+        builder.Property(x => x.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue(CompraRecibida.StatusEnProceso).IsRequired();
         builder.Property(x => x.FechaCreacionUtc).HasColumnName("fecha_creacion_utc").HasColumnType("timestamp with time zone").IsRequired();
         builder.Property(x => x.FechaActualizacionUtc).HasColumnName("fecha_actualizacion_utc").HasColumnType("timestamp with time zone");
         builder.Property(x => x.FechaComprobanteEnviadoUtc).HasColumnName("fecha_comprobante_enviado_utc").HasColumnType("timestamp with time zone");
+        builder.Property(x => x.ClaveArchivoComprobante).HasColumnName("clave_archivo_comprobante").HasMaxLength(260);
+        builder.Property(x => x.NombreArchivoComprobante).HasColumnName("nombre_archivo_comprobante").HasMaxLength(260);
+        builder.Property(x => x.TipoContenidoArchivoComprobante).HasColumnName("tipo_contenido_archivo_comprobante").HasMaxLength(100);
+        builder.Property(x => x.TamanoBytesArchivoComprobante).HasColumnName("tamano_bytes_archivo_comprobante");
+        builder.Property(x => x.FechaCargaArchivoComprobanteUtc).HasColumnName("fecha_carga_archivo_comprobante_utc").HasColumnType("timestamp with time zone");
         builder.HasOne(x => x.ContenedorCompartido).WithMany().HasForeignKey(x => x.ContenedorCompartidoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.MarcaBulto).WithMany().HasForeignKey(x => x.MarcaBultoId).OnDelete(DeleteBehavior.Restrict);

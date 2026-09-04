@@ -5,6 +5,9 @@ namespace ChinaVenezuela.Domain.Recepciones;
 
 public sealed class CompraRecibida
 {
+    public const string StatusEnProceso = "En proceso";
+    public const string StatusAprobado = "Aprobado";
+    public const string StatusSinTerminar = "Sin terminar";
     private CompraRecibida() { }
 
     public CompraRecibida(
@@ -31,6 +34,7 @@ public sealed class CompraRecibida
         Aduana = aduana;
         PuertoLlegada = puertoLlegada;
         MarcaBultoId = marcaBultoId;        ReceptorCodigoUsuario = receptorCodigoUsuario;
+        Status = StatusEnProceso;
         FechaCreacionUtc = fechaCreacionUtc;
     }
 
@@ -49,11 +53,36 @@ public sealed class CompraRecibida
     public Guid? MarcaBultoId { get; private set; }
     public MarcaBulto? MarcaBulto { get; private set; }    public string? ReceptorCodigoUsuario { get; private set; }
     public Usuario? Receptor { get; private set; }
+    public string Status { get; private set; } = StatusEnProceso;
     public DateTimeOffset FechaCreacionUtc { get; private set; }
     public DateTimeOffset? FechaActualizacionUtc { get; private set; }
     public DateTimeOffset? FechaComprobanteEnviadoUtc { get; private set; }
+    public string? ClaveArchivoComprobante { get; private set; }
+    public string? NombreArchivoComprobante { get; private set; }
+    public string? TipoContenidoArchivoComprobante { get; private set; }
+    public long? TamanoBytesArchivoComprobante { get; private set; }
+    public DateTimeOffset? FechaCargaArchivoComprobanteUtc { get; private set; }
 
     public void MarcarComprobanteEnviado(DateTimeOffset fechaEnvioUtc) => FechaComprobanteEnviadoUtc = fechaEnvioUtc;
+    public void ActualizarStatus(string status, DateTimeOffset fechaActualizacionUtc) { Status = status; FechaActualizacionUtc = fechaActualizacionUtc; }
+
+    public void AsignarArchivoComprobante(string clave, string nombreOriginal, string tipoContenido, long tamanoBytes, DateTimeOffset fechaCargaUtc)
+    {
+        ClaveArchivoComprobante = clave;
+        NombreArchivoComprobante = nombreOriginal;
+        TipoContenidoArchivoComprobante = tipoContenido;
+        TamanoBytesArchivoComprobante = tamanoBytes;
+        FechaCargaArchivoComprobanteUtc = fechaCargaUtc;
+    }
+
+    public void EliminarArchivoComprobante()
+    {
+        ClaveArchivoComprobante = null;
+        NombreArchivoComprobante = null;
+        TipoContenidoArchivoComprobante = null;
+        TamanoBytesArchivoComprobante = null;
+        FechaCargaArchivoComprobanteUtc = null;
+    }
 
     public void Actualizar(
         Guid? contenedorCompartidoId,

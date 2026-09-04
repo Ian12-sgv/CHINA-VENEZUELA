@@ -6,6 +6,7 @@ import { faFilePdf } from '@fortawesome/free-regular-svg-icons'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { catalogosApi, pedidosApi, receptoresApi } from '../api'
+import { convertirImagenAPng, dataUrlABytes, descargarBlob, empaquetarZip, escaparXml, nombreColumnaXlsx, celdaXlsx, textoABytes, type EntradaZip } from '../utils/exportarArchivos'
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog'
 import { DuplicarProductoDialog } from '../components/DuplicarProductoDialog'
 import type { CrearProductoPedidoRequest, PaginaProductosPedido, PedidoResumen, ProductoPedido, TipoImagenProductoPedido } from '../types'
@@ -242,25 +243,6 @@ async function cargarImagenComoDataUrl(id: string, tipo: TipoImagenProductoPedid
   } finally { URL.revokeObjectURL(url) }
 }
 
-async function convertirImagenAPng(blob: Blob) {
-  const temporal = URL.createObjectURL(blob)
-  try {
-    const imagen = await new Promise<HTMLImageElement>((resolver, rechazar) => {
-      const elemento = new Image()
-      elemento.onload = () => resolver(elemento)
-      elemento.onerror = () => rechazar(new Error('No fue posible procesar la imagen.'))
-      elemento.src = temporal
-    })
-    const maximo = 1000
-    const escala = Math.min(1, maximo / Math.max(imagen.naturalWidth, imagen.naturalHeight))
-    const lienzo = document.createElement('canvas')
-    lienzo.width = Math.max(1, Math.round(imagen.naturalWidth * escala))
-    lienzo.height = Math.max(1, Math.round(imagen.naturalHeight * escala))
-    lienzo.getContext('2d')?.drawImage(imagen, 0, 0, lienzo.width, lienzo.height)
-    return lienzo.toDataURL('image/png')
-  } finally { URL.revokeObjectURL(temporal) }
-}
-
 const obtenerMarcasBulto = (items: ProductoPedido[], marcasConfiguradas: string[]) => Array.from(new Set([
   ...marcasConfiguradas,
   ...items.flatMap((producto) => producto.bultos.map((bulto) => bulto.nombre)),
@@ -316,15 +298,4 @@ function descargarExcelCompatible(filas: Record<string, string | number>[], nomb
   descargarBlob(empaquetarZip(entradas), nombreArchivo)
 }
 
-type EntradaZip = { nombre: string; datos: Uint8Array }
-function textoABytes(valor: string) { return new TextEncoder().encode(valor) }
-function dataUrlABytes(url: string) { const base64 = url.slice(url.indexOf(',') + 1); const binario = atob(base64); return Uint8Array.from(binario, (caracter) => caracter.charCodeAt(0)) }
-function escaparXml(valor: string | number) { return String(valor).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;') }
-function nombreColumnaXlsx(indice: number) { let resultado = ''; let valor = indice + 1; while (valor > 0) { const resto = (valor - 1) % 26; resultado = String.fromCharCode(65 + resto) + resultado; valor = Math.floor((valor - 1) / 26) } return resultado }
-function celdaXlsx(columna: number, fila: number, valor: string | number, estilo: number) { return `<c r="${nombreColumnaXlsx(columna)}${fila}" t="inlineStr" s="${estilo}"><is><t>${escaparXml(valor)}</t></is></c>` }
 function xmlDibujoXlsx(imagenes: { datos: Uint8Array; fila: number; columna: number }[]) { return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${imagenes.map((imagen, indice) => `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>${imagen.columna}</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>${imagen.fila}</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:from><xdr:to><xdr:col>${imagen.columna + 1}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${imagen.fila + 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${indice + 1}" name="Imagen ${indice + 1}"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${indice + 1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`).join('')}</xdr:wsDr>` }
-function crc32(datos: Uint8Array) { let crc = 0xffffffff; for (const dato of datos) { crc ^= dato; for (let indice = 0; indice < 8; indice++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1)) } return (crc ^ 0xffffffff) >>> 0 }
-function entero16(valor: number) { const bytes = new Uint8Array(2); new DataView(bytes.buffer).setUint16(0, valor, true); return bytes }
-function entero32(valor: number) { const bytes = new Uint8Array(4); new DataView(bytes.buffer).setUint32(0, valor, true); return bytes }
-function empaquetarZip(entradas: EntradaZip[]) { const locales: Uint8Array[] = []; const centrales: Uint8Array[] = []; let desplazamiento = 0; for (const entrada of entradas) { const nombre = textoABytes(entrada.nombre); const crc = crc32(entrada.datos); const local = new Uint8Array(30 + nombre.length); local.set(entero32(0x04034b50), 0); local.set(entero16(20), 4); local.set(entero16(0x0800), 6); local.set(entero16(0), 8); local.set(entero16(0), 10); local.set(entero16(0), 12); local.set(entero32(crc), 14); local.set(entero32(entrada.datos.length), 18); local.set(entero32(entrada.datos.length), 22); local.set(entero16(nombre.length), 26); local.set(entero16(0), 28); local.set(nombre, 30); locales.push(local, entrada.datos); const central = new Uint8Array(46 + nombre.length); central.set(entero32(0x02014b50), 0); central.set(entero16(20), 4); central.set(entero16(20), 6); central.set(entero16(0x0800), 8); central.set(entero16(0), 10); central.set(entero16(0), 12); central.set(entero16(0), 14); central.set(entero32(crc), 16); central.set(entero32(entrada.datos.length), 20); central.set(entero32(entrada.datos.length), 24); central.set(entero16(nombre.length), 28); central.set(entero16(0), 30); central.set(entero16(0), 32); central.set(entero16(0), 34); central.set(entero16(0), 36); central.set(entero32(0), 38); central.set(entero32(desplazamiento), 42); central.set(nombre, 46); centrales.push(central); desplazamiento += local.length + entrada.datos.length } const tamanoCentral = centrales.reduce((total, parte) => total + parte.length, 0); const fin = new Uint8Array(22); fin.set(entero32(0x06054b50), 0); fin.set(entero16(0), 4); fin.set(entero16(0), 6); fin.set(entero16(entradas.length), 8); fin.set(entero16(entradas.length), 10); fin.set(entero32(tamanoCentral), 12); fin.set(entero32(desplazamiento), 16); fin.set(entero16(0), 20); const partes = [...locales, ...centrales, fin].map((parte) => parte.buffer.slice(parte.byteOffset, parte.byteOffset + parte.byteLength) as ArrayBuffer); return new Blob(partes, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
-function descargarBlob(archivo: Blob, nombre: string) { const url = URL.createObjectURL(archivo); const enlace = document.createElement('a'); enlace.href = url; enlace.download = nombre; enlace.click(); URL.revokeObjectURL(url) }

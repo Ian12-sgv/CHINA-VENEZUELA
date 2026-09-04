@@ -66,6 +66,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection(ResendOptions.SectionName));
 builder.Services.Configure<ImagenesOptions>(builder.Configuration.GetSection(ImagenesOptions.SectionName));
 builder.Services.AddHttpClient<IComprobanteEmailService, ResendComprobanteEmailService>(client => client.BaseAddress = new Uri("https://api.resend.com/"));
+builder.Services.AddSingleton<IComprobanteCompraAdjuntosService, ComprobanteCompraAdjuntosService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddDbContext<ChinaVenezuelaDbContext>(options => options.UseNpgsql(connectionString));

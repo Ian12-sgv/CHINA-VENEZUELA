@@ -8,6 +8,9 @@ public interface ICompraRecibidaService
     Task<IReadOnlyList<CompraRecibidaResponse>> ObtenerTodasAsync(CancellationToken cancellationToken);
     Task<CompraRecibidaResponse> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken);
     Task<CompraRecibidaResponse> ActualizarAsync(string codigoRemitente, Guid id, ActualizarCompraRecibidaRequest request, CancellationToken cancellationToken);
+    Task<CompraRecibidaResponse> ActualizarStatusAsync(Guid id, ActualizarStatusCompraRecibidaRequest request, CancellationToken cancellationToken);
     Task EliminarAsync(Guid id, CancellationToken cancellationToken);
     Task MarcarComprobanteEnviadoAsync(Guid id, CancellationToken cancellationToken);
+    Task<CompraRecibidaResponse> GuardarArchivoComprobanteAsync(Guid id, GuardarArchivoComprobanteCompraRequest request, CancellationToken cancellationToken);
+    Task<CompraRecibidaResponse> EliminarArchivoComprobanteAsync(Guid id, CancellationToken cancellationToken);
 }

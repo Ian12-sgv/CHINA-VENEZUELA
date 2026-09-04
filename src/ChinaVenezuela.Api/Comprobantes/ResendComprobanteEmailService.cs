@@ -22,7 +22,10 @@ public sealed class ResendComprobanteEmailService(
             [request.CorreoReceptor],
             [request.CorreoRemitente],
             request.Asunto,
-            request.ContenidoHtml));
+            request.ContenidoHtml,
+            request.Adjuntos?.Select(adjunto => new ResendAdjunto(
+                adjunto.NombreArchivo,
+                Convert.ToBase64String(adjunto.Contenido))).ToArray() ?? []));
         using var response = await httpClient.SendAsync(message, cancellationToken);
         ExigirEnvioCorrecto(response, "Resend no pudo enviar el comprobante. Verifica la clave API y el remitente de dominio verificado.");
         return new ComprobanteEnviadoResponse(request.CorreoReceptor, request.CorreoRemitente, timeProvider.GetUtcNow());
@@ -53,6 +56,11 @@ public sealed class ResendComprobanteEmailService(
         [property: JsonPropertyName("to")] IReadOnlyList<string> To,
         [property: JsonPropertyName("cc")] IReadOnlyList<string> Cc,
         [property: JsonPropertyName("subject")] string Subject,
-        [property: JsonPropertyName("html")] string Html);
+        [property: JsonPropertyName("html")] string Html,
+        [property: JsonPropertyName("attachments")] IReadOnlyList<ResendAdjunto> Adjuntos);
+
+    private sealed record ResendAdjunto(
+        [property: JsonPropertyName("filename")] string NombreArchivo,
+        [property: JsonPropertyName("content")] string ContenidoBase64);
 
 }

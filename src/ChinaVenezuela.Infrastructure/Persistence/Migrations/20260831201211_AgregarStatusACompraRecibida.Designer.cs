@@ -3,6 +3,7 @@ using System;
 using ChinaVenezuela.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ChinaVenezuelaDbContext))]
-    partial class ChinaVenezuelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260831201211_AgregarStatusACompraRecibida")]
+    partial class AgregarStatusACompraRecibida
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -527,11 +530,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("aduana");
 
-                    b.Property<string>("ClaveArchivoComprobante")
-                        .HasMaxLength(260)
-                        .HasColumnType("character varying(260)")
-                        .HasColumnName("clave_archivo_comprobante");
-
                     b.Property<Guid?>("ContenedorCompartidoId")
                         .HasColumnType("uuid")
                         .HasColumnName("contenedor_compartido_id");
@@ -548,10 +546,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("FechaActualizacionUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_actualizacion_utc");
-
-                    b.Property<DateTimeOffset?>("FechaCargaArchivoComprobanteUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecha_carga_archivo_comprobante_utc");
 
                     b.Property<DateTimeOffset?>("FechaComprobanteEnviadoUtc")
                         .HasColumnType("timestamp with time zone")
@@ -572,11 +566,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("MarcaBultoId")
                         .HasColumnType("uuid")
                         .HasColumnName("marca_bulto_id");
-
-                    b.Property<string>("NombreArchivoComprobante")
-                        .HasMaxLength(260)
-                        .HasColumnType("character varying(260)")
-                        .HasColumnName("nombre_archivo_comprobante");
 
                     b.Property<string>("NombreContenedor")
                         .IsRequired()
@@ -608,15 +597,6 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("En proceso")
                         .HasColumnName("status");
-
-                    b.Property<long?>("TamanoBytesArchivoComprobante")
-                        .HasColumnType("bigint")
-                        .HasColumnName("tamano_bytes_archivo_comprobante");
-
-                    b.Property<string>("TipoContenidoArchivoComprobante")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("tipo_contenido_archivo_comprobante");
 
                     b.HasKey("Id");
 
