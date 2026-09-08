@@ -93,7 +93,7 @@ Si el envío no está configurado, revisar las variables `Resend__ApiKey` y `Res
 ## 7. Registrar un producto/pedido
 
 1. Entrar en **Pedidos**.
-2. Elegir si se agregará a un grupo existente o a un nuevo grupo.
+2. Elegir si se agregará a un grupo existente o a un nuevo grupo. Al seleccionar un grupo existente, el sistema toma su subpedido creado más recientemente y completa únicamente: agente, tipo de pedido, fecha de registro, inicio de fabricación, imagen de fábrica y fábrica. Los demás campos se mantienen vacíos para registrar el nuevo subpedido.
 3. Si es nuevo, el sistema asigna automáticamente el siguiente correlativo: `001`, `002`, etc.
 4. Completar los campos del producto:
    - Tipo de producto: Nuevo o Repetido.
@@ -127,8 +127,8 @@ En **Catálogo de productos** se puede:
 - Duplicar un subpedido dentro del mismo grupo: se solicita un código de barra nuevo y único; el nuevo registro queda pendiente y copia las imágenes de fábrica y del producto terminado en archivos independientes.
 - Actualizar o eliminar las imágenes.
 - Marcar un producto como enviado.
-- Descargar Excel o PDF del grupo completo o de un subpedido.
-- Mostrar cada marca de bulto usada como encabezado de columna y su cantidad debajo, tanto en catálogo como en las exportaciones.
+- Marcar uno o varios subpedidos de un grupo mediante las casillas de selección y descargar Excel/PDF solo con los seleccionados. Si no se marca ninguno, los botones del grupo conservan la exportación completa.
+- Al abrir un pedido agrupado, mostrar únicamente las marcas de bulto con cantidad mayor que cero en sus propios subpedidos; aplicar la misma regla a Excel y PDF.
 
 Los documentos de exportación incluyen las imágenes y los valores monetarios en RMB/CNY (`¥`).
 

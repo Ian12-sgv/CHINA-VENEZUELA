@@ -65,12 +65,19 @@ async function requestMultipart<T>(path: string, formData: FormData): Promise<T>
   throw new Error(validation || problem.detail || problem.title || 'No fue posible cargar la imagen.')
 }
 
-async function obtenerImagen(path: string): Promise<string | null> {
+async function obtenerArchivo(path: string, nombreBase: string): Promise<File | null> {
   const token = getAccessToken()
   const response = await fetch(`${apiBaseUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
   if (response.status === 404) return null
   if (!response.ok) throw new Error('No fue posible cargar la imagen.')
-  return URL.createObjectURL(await response.blob())
+  const contenido = await response.blob()
+  const extension = contenido.type === 'image/png' ? '.png' : contenido.type === 'image/webp' ? '.webp' : '.jpg'
+  return new File([contenido], `${nombreBase}${extension}`, { type: contenido.type || 'image/jpeg' })
+}
+
+async function obtenerImagen(path: string): Promise<string | null> {
+  const archivo = await obtenerArchivo(path, 'imagen')
+  return archivo ? URL.createObjectURL(archivo) : null
 }
 export const authApi = {
   iniciarSesion: (data: IniciarSesionRequest) => request<InicioSesionResponse>('/auth/iniciar-sesion', { method: 'POST', body: JSON.stringify(data) }),
@@ -142,6 +149,7 @@ export const pedidosApi = {
   enviarProducto: (id: string, receptorCodigoUsuario: string) => request<{ receptor: string; copia: string; enviadoEnUtc: string }>(`/pedidos/productos/${id}/enviar`, { method: 'POST', body: JSON.stringify({ receptorCodigoUsuario }) }),
   subirImagen: (id: string, tipo: TipoImagenProductoPedido, archivo: File) => { const data = new FormData(); data.append('imagen', archivo); return requestMultipart(`/pedidos/productos/${id}/imagenes/${tipo}`, data) },
   obtenerImagen: (id: string, tipo: TipoImagenProductoPedido) => obtenerImagen(`/pedidos/productos/${id}/imagenes/${tipo}`),
+  obtenerImagenArchivo: (id: string, tipo: TipoImagenProductoPedido) => obtenerArchivo(`/pedidos/productos/${id}/imagenes/${tipo}`, `imagen-${tipo}-${id}`),
   eliminarImagen: (id: string, tipo: TipoImagenProductoPedido) => request<void>(`/pedidos/productos/${id}/imagenes/${tipo}`, { method: 'DELETE' }),
   registrosPrecios: () => request<RegistroPrecioPedido[]>('/pedidos/registros-precios'),
 }

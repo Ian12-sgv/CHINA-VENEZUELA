@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronDown, faCloudArrowUp, faFileExcel, faTrash } from '@fortawesome/free-solid-svg-icons'
@@ -38,7 +38,8 @@ export function PedidosPage() {
 
   const [tipoImagenEliminar, setTipoImagenEliminar] = useState<TipoImagenProductoPedido | null>(null)
   const [imagenFabricaArchivo, setImagenFabricaArchivo] = useState<File | null>(null)
-  const [imagenTerminadaArchivo, setImagenTerminadaArchivo] = useState<File | null>(null)
+  const [autocompletandoGrupo, setAutocompletandoGrupo] = useState(false)
+  const solicitudAutocompletarGrupo = useRef(0)
   const enviado = filtroEnvio === 'todos' ? undefined : filtroEnvio === 'enviados'
 
   const productos = useQuery({ queryKey: ['pedidos-productos', pagina, busqueda, filtroEnvio, grupoFiltro], queryFn: () => pedidosApi.productos(pagina, busqueda, enviado, 10, grupoFiltro) })
@@ -63,10 +64,9 @@ export function PedidosPage() {
     mutationFn: async () => {
       const producto = editingId ? await pedidosApi.actualizarProducto(editingId, form) : await pedidosApi.crearProducto(form)
       if (imagenFabricaArchivo) await pedidosApi.subirImagen(producto.id, 'fabrica', imagenFabricaArchivo)
-      if (imagenTerminadaArchivo) await pedidosApi.subirImagen(producto.id, 'producto-terminado', imagenTerminadaArchivo)
       return producto
     },
-    onSuccess: async (producto) => { actualizarProductoEnCache(producto); setForm(crearFormularioInicial()); setModoGrupo(''); setImagenFabricaArchivo(null); setImagenTerminadaArchivo(null); setEditingId(null); setProductoEditando(null); setError(''); setPagina(1); await refrescarPedidos() },
+    onSuccess: async (producto) => { actualizarProductoEnCache(producto); setForm(crearFormularioInicial()); setModoGrupo(''); setImagenFabricaArchivo(null); setEditingId(null); setProductoEditando(null); setError(''); setPagina(1); await refrescarPedidos() },
     onError: (e) => setError(e instanceof Error ? e.message : 'No fue posible guardar.'),
   })
   const eliminar = useMutation({ mutationFn: pedidosApi.eliminarProducto, onSuccess: async () => { setDeleteTarget(null); await refrescarPedidos() }, onError: (e) => { setError(e instanceof Error ? e.message : 'No fue posible eliminar.'); setDeleteTarget(null) } })
@@ -89,22 +89,70 @@ export function PedidosPage() {
   const agregarBulto = () => setForm((actual) => ({ ...actual, bultos: [...actual.bultos, { marcaBultoId: '', cantidad: 1 }] }))
   const actualizarBulto = (indice: number, campo: 'marcaBultoId' | 'cantidad', valor: string) => setForm((actual) => ({ ...actual, bultos: actual.bultos.map((bulto, posicion) => posicion === indice ? { ...bulto, [campo]: campo === 'cantidad' ? Number(valor) : valor } : bulto) }))
   const quitarBulto = (indice: number) => setForm((actual) => ({ ...actual, bultos: actual.bultos.filter((_, posicion) => posicion !== indice) }))
-  const seleccionarModoGrupo = (modo: ModoGrupo) => { setModoGrupo(modo); setForm((x) => ({ ...x, pedidoId: null, nombreNuevoGrupo: null })) }
-  const cancelar = () => { setEditingId(null); setProductoEditando(null); setImagenFabricaArchivo(null); setImagenTerminadaArchivo(null); setModoGrupo(''); setForm(crearFormularioInicial()) }
+  const seleccionarModoGrupo = (modo: ModoGrupo) => {
+    solicitudAutocompletarGrupo.current += 1
+    setAutocompletandoGrupo(false)
+    setImagenFabricaArchivo(null)
+    setModoGrupo(modo)
+    setForm((x) => ({ ...x, pedidoId: null, nombreNuevoGrupo: null }))
+  }
+  const seleccionarGrupoExistente = async (pedidoId: string) => {
+    const solicitud = ++solicitudAutocompletarGrupo.current
+    setError('')
+    setImagenFabricaArchivo(null)
+    setForm((actual) => ({
+      ...actual,
+      pedidoId: pedidoId || null,
+      nombreNuevoGrupo: null,
+      agente: null,
+      tipoProducto: null,
+      fechaRegistroPedido: fechaActual(),
+      fechaInicioFabricacion: null,
+      fabrica: null,
+    }))
+    if (!pedidoId) {
+      setAutocompletandoGrupo(false)
+      return
+    }
+    setAutocompletandoGrupo(true)
+    try {
+      const resultado = await pedidosApi.productos(1, '', undefined, 5000, pedidoId)
+      const anterior = resultado.items.reduce<ProductoPedido | null>(
+        (masReciente, producto) => !masReciente || new Date(producto.fechaCreacionUtc).getTime() > new Date(masReciente.fechaCreacionUtc).getTime() ? producto : masReciente,
+        null,
+      )
+      if (!anterior || solicitud !== solicitudAutocompletarGrupo.current) return
+      setForm((actual) => actual.pedidoId !== pedidoId ? actual : ({
+        ...actual,
+        agente: anterior.agente,
+        tipoProducto: anterior.tipoProducto,
+        fechaRegistroPedido: anterior.fechaRegistroPedido,
+        fechaInicioFabricacion: anterior.fechaInicioFabricacion,
+        fabrica: anterior.fabrica,
+      }))
+      const imagenFabrica = await pedidosApi.obtenerImagenArchivo(anterior.id, 'fabrica')
+      if (imagenFabrica && solicitud === solicitudAutocompletarGrupo.current) setImagenFabricaArchivo(imagenFabrica)
+    } catch (e) {
+      if (solicitud === solicitudAutocompletarGrupo.current) setError(e instanceof Error ? `No se pudieron completar los datos del grupo: ${e.message}` : 'No se pudieron completar los datos del grupo.')
+    } finally {
+      if (solicitud === solicitudAutocompletarGrupo.current) setAutocompletandoGrupo(false)
+    }
+  }
+  const cancelar = () => { setEditingId(null); setProductoEditando(null); setImagenFabricaArchivo(null); setModoGrupo(''); setForm(crearFormularioInicial()) }
   const editar = (producto: ProductoPedido) => {
     if (producto.enviado) return
-    setEditingId(producto.id); setProductoEditando(producto); setImagenFabricaArchivo(null); setImagenTerminadaArchivo(null); setModoGrupo(producto.pedidoId ? 'existente' : '')
+    setEditingId(producto.id); setProductoEditando(producto); setImagenFabricaArchivo(null); setModoGrupo(producto.pedidoId ? 'existente' : '')
     setForm({ pedidoId: producto.pedidoId, nombreNuevoGrupo: null, codigoBarraAsignado: producto.codigoBarraAsignado, precioRmb: producto.precioRmb, totalRmb: producto.totalRmb, cantidadDoz: producto.cantidadDoz, referenciaAsignada: producto.referenciaAsignada, tipoProducto: producto.tipoProducto, agente: producto.agente, fabrica: producto.fabrica, composicionTela: producto.composicionTela, colorParaFabricar: producto.colorParaFabricar, marcaProducto: producto.marcaProducto, curvaTalla: producto.curvaTalla, packPorCaja: producto.packPorCaja, cantidadUnidades: producto.cantidadUnidades, bultos: producto.bultos.map((bulto) => ({ marcaBultoId: bulto.marcaBultoId, cantidad: bulto.cantidad })), fechaRegistroPedido: producto.fechaRegistroPedido, fechaInicioFabricacion: producto.fechaInicioFabricacion })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const exportar = async (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen) => {
+  const exportar = async (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen, seleccionados?: ProductoPedido[]) => {
     try {
       setExportando(tipo); setError('')
       const pedidoId = pedido?.id ?? grupoFiltro
-      const resultado = producto ? null : await pedidosApi.productos(1, busqueda, enviado, 5000, pedidoId)
-      const items = producto ? [producto] : resultado?.items ?? []
+      const resultado = producto || seleccionados?.length ? null : await pedidosApi.productos(1, busqueda, enviado, 5000, pedidoId)
+      const items = producto ? [producto] : seleccionados?.length ? seleccionados : resultado?.items ?? []
       const imagenes = await Promise.all(items.map(cargarImagenesParaExportacion))
-      const marcasBultoReporte = obtenerMarcasBulto(items, marcasBulto.data?.map((marca) => marca.nombre) ?? [])
+      const marcasBultoReporte = obtenerMarcasBulto(items)
       const filas = items.map((item, indice) => filaExportable(item, marcasBultoReporte, imagenes[indice]))
       const nombreBase = producto
         ? `subpedido-${producto.referenciaAsignada}`
@@ -149,7 +197,7 @@ export function PedidosPage() {
       {error && <p className="error">{error}</p>}
       <form className="form-grid" onSubmit={(e: FormEvent) => { e.preventDefault(); guardar.mutate() }}>
         <label><span>Grupo de pedido</span><select required value={modoGrupo} onChange={(e) => seleccionarModoGrupo(e.target.value as ModoGrupo)}><option value="">Selecciona una opción</option><option value="existente">Agregar a un grupo existente</option><option value="nuevo">Crear un grupo nuevo</option></select></label>
-        {modoGrupo === 'existente' && <label><span>Grupo existente</span><select required value={form.pedidoId ?? ''} onChange={(e) => setForm((x) => ({ ...x, pedidoId: e.target.value || null }))}><option value="">Selecciona un grupo</option>{grupos.data?.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre} ({grupo.cantidadPedidos})</option>)}</select></label>}
+        {modoGrupo === 'existente' && <label><span>Grupo existente</span><select required value={form.pedidoId ?? ''} onChange={(e) => void seleccionarGrupoExistente(e.target.value)}><option value="">Selecciona un grupo</option>{grupos.data?.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre} ({grupo.cantidadPedidos})</option>)}</select>{autocompletandoGrupo && <small>Copiando datos del último subpedido...</small>}</label>}
         {modoGrupo === 'nuevo' && <label><span>Grupo nuevo</span><input value="Se asignará automáticamente al registrar" readOnly aria-label="Grupo nuevo con correlativo automático" /></label>}
         <label><span>Agente</span><select value={form.agente ?? ''} onChange={(e) => field('agente', e.target.value)}><option value="">Sin asignar</option>{agentes.data?.map((agente) => <option key={agente.id} value={agente.nombre}>{agente.nombre}</option>)}</select></label>
         <label><span>Tipo de pedido</span><select required value={form.tipoProducto ?? ''} onChange={(e) => field('tipoProducto', e.target.value)}><option value="">Selecciona un tipo</option><option value="Nuevo">Nuevo</option><option value="Repetido">Repetido</option></select></label>
@@ -164,7 +212,6 @@ export function PedidosPage() {
         <label><span>Pack por cajas</span><input type="number" min="1" step="1" value={form.packPorCaja ?? ''} onChange={(e) => numericField('packPorCaja', e.target.value)} /></label>
         <label><span>Cantidad de unidades</span><input type="number" min="1" step="1" value={form.cantidadUnidades ?? ''} onChange={(e) => numericField('cantidadUnidades', e.target.value)} /></label>
         <div className="bultos-field description-field"><span>Marcas y cantidades de bulto</span>{form.bultos.map((bulto, indice) => <div className="bulto-row" key={`${bulto.marcaBultoId}-${indice}`}><select value={bulto.marcaBultoId} onChange={(e) => actualizarBulto(indice, 'marcaBultoId', e.target.value)}><option value="">Selecciona una marca</option>{marcasBulto.data?.map((marca) => <option key={marca.id} value={marca.id} disabled={form.bultos.some((actual, posicion) => posicion !== indice && actual.marcaBultoId === marca.id)}>{marca.nombre}</option>)}</select><input aria-label="Cantidad de bultos" type="number" min="1" step="1" value={bulto.cantidad || ''} onChange={(e) => actualizarBulto(indice, 'cantidad', e.target.value)} /><button className="danger-button" type="button" onClick={() => quitarBulto(indice)}>Quitar</button></div>)}<button className="secondary bulto-add" type="button" onClick={agregarBulto}>Agregar marca de bulto</button></div>
-        <CampoImagenProducto etiqueta="Imagen del producto terminado" tipo="producto-terminado" productoId={editingId} tieneImagen={productoEditando?.tieneImagenProductoTerminado ?? false} archivo={imagenTerminadaArchivo} ocupada={actualizarImagen.isPending || eliminarImagen.isPending} seleccionar={(archivo) => { setImagenTerminadaArchivo(archivo); setError('') }} actualizar={(archivo) => actualizarImagen.mutate({ tipo: 'producto-terminado', archivo })} eliminar={() => setTipoImagenEliminar('producto-terminado')} error={setError} />
         <label><span>Referencia asignada</span><input required value={form.referenciaAsignada} onChange={(e) => field('referenciaAsignada', e.target.value)} /></label>
         <label><span>Código barra asignado</span><input required value={form.codigoBarraAsignado} onChange={(e) => field('codigoBarraAsignado', e.target.value)} /></label>
         <label className="currency-field"><span>Precio (RMB)</span><div className="currency-input"><span aria-hidden="true">¥</span><input type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" value={form.precioRmb ?? ''} onChange={(e) => numericField('precioRmb', e.target.value)} /></div><small>Yuan chino · CNY</small></label>
@@ -173,7 +220,7 @@ export function PedidosPage() {
         <div className="description-field"><button className="primary" disabled={guardar.isPending}>{guardar.isPending ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Registrar producto'}</button></div>
       </form>
     </article>
-    <Tabla pagina={productos.data} grupos={grupos.data ?? []} marcasBulto={marcasBulto.data?.map((marca) => marca.nombre) ?? []} grupoFiltro={grupoFiltro} busqueda={busqueda} filtroEnvio={filtroEnvio} cargar={productos.isLoading} exportando={exportando} buscar={(value) => { setBusqueda(value); setPagina(1) }} filtrarGrupo={(value) => { setGrupoFiltro(value); setPagina(1) }} filtrarEnvio={(value) => { setFiltroEnvio(value); setPagina(1) }} irPagina={setPagina} editar={editar} eliminar={setDeleteTarget} duplicar={(producto) => { setErrorDuplicar(''); setProductoDuplicar(producto) }} enviar={setProductoEnviar} exportar={exportar} />
+    <Tabla pagina={productos.data} grupos={grupos.data ?? []} grupoFiltro={grupoFiltro} busqueda={busqueda} filtroEnvio={filtroEnvio} cargar={productos.isLoading} exportando={exportando} buscar={(value) => { setBusqueda(value); setPagina(1) }} filtrarGrupo={(value) => { setGrupoFiltro(value); setPagina(1) }} filtrarEnvio={(value) => { setFiltroEnvio(value); setPagina(1) }} irPagina={setPagina} editar={editar} eliminar={setDeleteTarget} duplicar={(producto) => { setErrorDuplicar(''); setProductoDuplicar(producto) }} enviar={setProductoEnviar} exportar={exportar} />
     {productoEnviar && <article className="card form-card"><div className="form-title"><div><h3>Enviar producto</h3><p>{productoEnviar.referenciaAsignada}</p></div><button className="link-button" onClick={() => setProductoEnviar(null)}>Cancelar</button></div><label><span>Receptor</span><select value={receptorCodigo} onChange={(e) => setReceptorCodigo(e.target.value)}><option value="">Selecciona un usuario</option>{receptores.data?.map((x) => <option key={x.codigoUsuario} value={x.codigoUsuario}>{x.nombre}</option>)}</select></label><button className="primary" disabled={enviar.isPending || !receptorCodigo} onClick={() => enviar.mutate()}>{enviar.isPending ? 'Enviando...' : 'Enviar por correo'}</button></article>}
     <DuplicarProductoDialog producto={productoDuplicar} ocupada={duplicar.isPending} error={errorDuplicar} onCancel={() => { setProductoDuplicar(null); setErrorDuplicar('') }} onConfirm={(codigo) => duplicar.mutate(codigo)} />
     <ConfirmDeleteDialog open={tipoImagenEliminar !== null} itemName={tipoImagenEliminar === 'fabrica' ? 'la imagen de fábricas' : 'la imagen del producto terminado'} onCancel={() => setTipoImagenEliminar(null)} onConfirm={() => eliminarImagen.mutate()} />
@@ -181,22 +228,22 @@ export function PedidosPage() {
   </section>
 }
 
-function Tabla({ pagina, grupos, marcasBulto, grupoFiltro, busqueda, filtroEnvio, cargar, exportando, buscar, filtrarGrupo, filtrarEnvio, irPagina, editar, eliminar, duplicar, enviar, exportar }: { pagina: PaginaProductosPedido | undefined; grupos: PedidoResumen[]; marcasBulto: string[]; grupoFiltro: string; busqueda: string; filtroEnvio: FiltroEnvio; cargar: boolean; exportando: 'excel' | 'pdf' | null; buscar: (x: string) => void; filtrarGrupo: (x: string) => void; filtrarEnvio: (x: FiltroEnvio) => void; irPagina: (x: number) => void; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen) => void }) {
+function Tabla({ pagina, grupos, grupoFiltro, busqueda, filtroEnvio, cargar, exportando, buscar, filtrarGrupo, filtrarEnvio, irPagina, editar, eliminar, duplicar, enviar, exportar }: { pagina: PaginaProductosPedido | undefined; grupos: PedidoResumen[]; grupoFiltro: string; busqueda: string; filtroEnvio: FiltroEnvio; cargar: boolean; exportando: 'excel' | 'pdf' | null; buscar: (x: string) => void; filtrarGrupo: (x: string) => void; filtrarEnvio: (x: FiltroEnvio) => void; irPagina: (x: number) => void; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen, seleccionados?: ProductoPedido[]) => void }) {
   const [grupoExpandido, setGrupoExpandido] = useState<string | null>(grupoFiltro || null)
   useEffect(() => { if (grupoFiltro) setGrupoExpandido(grupoFiltro) }, [grupoFiltro])
   const itemsSinGrupo = (pagina?.items ?? []).filter((producto) => !producto.pedidoId)
   const gruposVisibles = grupoFiltro ? grupos.filter((grupo) => grupo.id === grupoFiltro) : grupos
   const grupoActual = grupos.find((grupo) => grupo.id === grupoFiltro)
-  const marcasBultoColumnas = Array.from(new Set([
-    ...marcasBulto,
-    ...(pagina?.items.flatMap((producto) => producto.bultos.map((bulto) => bulto.nombre)) ?? []),
-  ])).sort((a, b) => a.localeCompare(b, 'es'))
+  const productosParaColumnas = grupoExpandido
+    ? (pagina?.items ?? []).filter((producto) => producto.pedidoId === grupoExpandido)
+    : pagina?.items ?? []
+  const marcasBultoColumnas = obtenerMarcasBulto(productosParaColumnas)
   const totalColumnasCatalogo = 21 + marcasBultoColumnas.length
   const alternarGrupo = (id: string) => setGrupoExpandido((actual) => actual === id ? null : id)
 
   return <article className="card table-card">
     <div className="table-toolbar"><div><h3>Catálogo de productos</h3><p>{grupoActual ? `${grupoActual.nombre} · ${grupoActual.cantidadPedidos} subpedidos` : `${pagina?.total ?? 0} artículos · ${pagina?.totalPaginas ?? 0} páginas`}</p></div><div><select aria-label="Filtrar por grupo de pedido" value={grupoFiltro} onChange={(e) => filtrarGrupo(e.target.value)}><option value="">Todos los pedidos agrupados</option>{grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre} ({grupo.cantidadPedidos})</option>)}</select><select aria-label="Filtrar por envío" value={filtroEnvio} onChange={(e) => filtrarEnvio(e.target.value as FiltroEnvio)}><option value="todos">Todos</option><option value="enviados">Enviados</option><option value="pendientes">Pendientes de envío</option></select><input placeholder="Buscar en todos los campos" value={busqueda} onChange={(e) => buscar(e.target.value)} /></div></div>
-    <div className="table-wrap"><table className="productos-table"><thead><tr><th>Grupo</th><th>Agente</th><th>Tipo de pedido</th><th>Registro pedido</th><th>Inicio fabricación</th><th>Imagen de fábricas</th><th>Fábrica</th><th>Composición tela</th><th>Color para fabricar</th><th>Marca del producto</th><th>Curva talla</th><th>Pack por cajas</th><th>Cantidad de unidades</th>{marcasBultoColumnas.map((marca) => <th key={marca}>{marca}</th>)}<th>Imagen producto terminado</th><th>Referencia asignada</th><th>Código barra asignado</th><th>Precio (RMB)</th><th>Total (RMB)</th><th>Cantidad DOZ</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    <div className="table-wrap"><table className="productos-table"><thead><tr><th>Grupo</th><th>Agente</th><th>Tipo de pedido</th><th>Registro pedido</th><th>Inicio fabricación</th><th>Imagen de fábricas</th><th>Fábrica</th><th>Composición tela</th><th>Color para fabricar</th><th>Marca del producto</th><th>Curva talla</th><th>Pack por cajas</th><th>Cantidad de unidades</th>{marcasBultoColumnas.map((marca) => <th key={marca}>{marca}</th>)}<th>Referencia asignada</th><th>Código barra asignado</th><th>Precio (RMB)</th><th>Total (RMB)</th><th>Cantidad DOZ</th><th>Seleccionar</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
       {cargar ? <tr><td colSpan={totalColumnasCatalogo} className="empty">Cargando...</td></tr> : <>
         {gruposVisibles.map((grupo) => <GrupoAcordeon key={grupo.id} grupo={grupo} marcasBulto={marcasBultoColumnas} expandido={grupoExpandido === grupo.id} busqueda={busqueda} filtroEnvio={filtroEnvio} exportando={exportando} alternar={() => alternarGrupo(grupo.id)} editar={editar} eliminar={eliminar} duplicar={duplicar} enviar={enviar} exportar={exportar} />)}
         {itemsSinGrupo.map((producto) => <FilaProducto key={producto.id} producto={producto} marcasBulto={marcasBultoColumnas} etiquetaGrupo="Sin grupo" exportando={exportando} editar={editar} eliminar={eliminar} duplicar={duplicar} enviar={enviar} exportar={exportar} />)}
@@ -207,18 +254,36 @@ function Tabla({ pagina, grupos, marcasBulto, grupoFiltro, busqueda, filtroEnvio
   </article>
 }
 
-function GrupoAcordeon({ grupo, marcasBulto, expandido, busqueda, filtroEnvio, exportando, alternar, editar, eliminar, duplicar, enviar, exportar }: { grupo: PedidoResumen; marcasBulto: string[]; expandido: boolean; busqueda: string; filtroEnvio: FiltroEnvio; exportando: 'excel' | 'pdf' | null; alternar: () => void; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen) => void }) {
+function GrupoAcordeon({ grupo, marcasBulto, expandido, busqueda, filtroEnvio, exportando, alternar, editar, eliminar, duplicar, enviar, exportar }: { grupo: PedidoResumen; marcasBulto: string[]; expandido: boolean; busqueda: string; filtroEnvio: FiltroEnvio; exportando: 'excel' | 'pdf' | null; alternar: () => void; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen, seleccionados?: ProductoPedido[]) => void }) {
   const enviado = filtroEnvio === 'todos' ? undefined : filtroEnvio === 'enviados'
   const totalColumnas = 21 + marcasBulto.length
   const detalle = useQuery({ queryKey: ['pedidos-grupo-detalle', grupo.id, busqueda, filtroEnvio], queryFn: () => pedidosApi.productos(1, busqueda, enviado, 5000, grupo.id), enabled: expandido })
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(() => new Set())
+  const items = detalle.data?.items ?? []
+  useEffect(() => {
+    const visibles = new Set(items.map((producto) => producto.id))
+    setSeleccionados((actual) => {
+      const siguiente = new Set([...actual].filter((id) => visibles.has(id)))
+      return siguiente.size === actual.size ? actual : siguiente
+    })
+  }, [detalle.data])
+  const subpedidosSeleccionados = items.filter((producto) => seleccionados.has(producto.id))
+  const alternarSeleccion = (id: string) => setSeleccionados((actual) => {
+    const siguiente = new Set(actual)
+    if (siguiente.has(id)) siguiente.delete(id)
+    else siguiente.add(id)
+    return siguiente
+  })
+  const exportarGrupo = (tipo: 'excel' | 'pdf') => exportar(tipo, undefined, grupo, subpedidosSeleccionados.length ? subpedidosSeleccionados : undefined)
+  const textoExportacion = subpedidosSeleccionados.length ? `Descargar ${subpedidosSeleccionados.length} subpedido(s) seleccionado(s)` : 'Descargar el pedido completo'
   return <>
-    <tr className="group-summary-row"><td colSpan={totalColumnas - 1} className="group-summary-cell"><button type="button" className={`group-accordion${expandido ? ' expanded' : ''}`} onClick={alternar} aria-expanded={expandido}><FontAwesomeIcon icon={faChevronDown} /><span>{grupo.nombre}</span><small>{grupo.cantidadPedidos} subpedidos</small></button></td><td className="actions group-export-actions"><button className="export-button export-excel export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('excel', undefined, grupo)} title="Descargar el pedido completo en Excel" aria-label="Descargar el pedido completo en Excel"><FontAwesomeIcon icon={faFileExcel} /></button><button className="export-button export-pdf export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('pdf', undefined, grupo)} title="Descargar el pedido completo en PDF" aria-label="Descargar el pedido completo en PDF"><FontAwesomeIcon icon={faFilePdf} /></button></td></tr>
-    {expandido && (detalle.isLoading ? <tr><td colSpan={totalColumnas} className="empty">Cargando subpedidos...</td></tr> : (detalle.data?.items ?? []).length === 0 ? <tr><td colSpan={totalColumnas} className="empty">No hay subpedidos que coincidan con los filtros.</td></tr> : detalle.data!.items.map((producto) => <FilaProducto key={producto.id} producto={producto} marcasBulto={marcasBulto} etiquetaGrupo="↳ Subpedido" exportando={exportando} editar={editar} eliminar={eliminar} duplicar={duplicar} enviar={enviar} exportar={exportar} />))}
+    <tr className="group-summary-row"><td colSpan={totalColumnas - 1} className="group-summary-cell"><button type="button" className={`group-accordion${expandido ? ' expanded' : ''}`} onClick={alternar} aria-expanded={expandido}><FontAwesomeIcon icon={faChevronDown} /><span>{grupo.nombre}</span><small>{grupo.cantidadPedidos} subpedidos{subpedidosSeleccionados.length ? ` · ${subpedidosSeleccionados.length} seleccionados` : ''}</small></button></td><td className="actions group-export-actions"><button className="export-button export-excel export-inline" type="button" disabled={exportando !== null} onClick={() => exportarGrupo('excel')} title={`${textoExportacion} en Excel`} aria-label={`${textoExportacion} en Excel`}><FontAwesomeIcon icon={faFileExcel} /></button><button className="export-button export-pdf export-inline" type="button" disabled={exportando !== null} onClick={() => exportarGrupo('pdf')} title={`${textoExportacion} en PDF`} aria-label={`${textoExportacion} en PDF`}><FontAwesomeIcon icon={faFilePdf} /></button></td></tr>
+    {expandido && (detalle.isLoading ? <tr><td colSpan={totalColumnas} className="empty">Cargando subpedidos...</td></tr> : items.length === 0 ? <tr><td colSpan={totalColumnas} className="empty">No hay subpedidos que coincidan con los filtros.</td></tr> : items.map((producto) => <FilaProducto key={producto.id} producto={producto} marcasBulto={marcasBulto} etiquetaGrupo="↳ Subpedido" exportando={exportando} seleccionado={seleccionados.has(producto.id)} seleccionar={() => alternarSeleccion(producto.id)} editar={editar} eliminar={eliminar} duplicar={duplicar} enviar={enviar} exportar={exportar} />))}
   </>
 }
 
-function FilaProducto({ producto, marcasBulto, etiquetaGrupo, exportando, editar, eliminar, duplicar, enviar, exportar }: { producto: ProductoPedido; marcasBulto: string[]; etiquetaGrupo: string; exportando: 'excel' | 'pdf' | null; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen) => void }) {
-  return <tr className="subpedido-row"><td>{etiquetaGrupo}</td><td>{producto.agente ?? '-'}</td><td>{producto.tipoProducto ?? '-'}</td><td>{formatoFechaPedido(producto.fechaRegistroPedido)}</td><td>{formatoFechaPedido(producto.fechaInicioFabricacion)}</td><td><ImagenProducto id={producto.id} tipo="fabrica" tieneImagen={producto.tieneImagenFabrica} /></td><td>{producto.fabrica ?? '-'}</td><td>{producto.composicionTela ?? '-'}</td><td>{producto.colorParaFabricar ?? '-'}</td><td>{producto.marcaProducto ?? '-'}</td><td>{producto.curvaTalla ?? '-'}</td><td>{producto.packPorCaja ?? '-'}</td><td>{producto.cantidadUnidades ?? '-'}</td>{marcasBulto.map((marca) => <td key={marca}>{producto.bultos.find((bulto) => bulto.nombre === marca)?.cantidad ?? ''}</td>)}<td><ImagenProducto id={producto.id} tipo="producto-terminado" tieneImagen={producto.tieneImagenProductoTerminado} /></td><td><strong>{producto.referenciaAsignada}</strong></td><td>{producto.codigoBarraAsignado}</td><td>{formatoYuan(producto.precioRmb)}</td><td>{formatoYuan(producto.totalRmb)}</td><td>{producto.cantidadDoz ?? '-'}</td><td><span className="tag">{producto.enviado ? 'Enviado' : 'Pendiente'}</span></td><td className="actions"><button className="export-button export-excel export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('excel', producto)} title="Descargar este subpedido en Excel" aria-label="Descargar este subpedido en Excel"><FontAwesomeIcon icon={faFileExcel} /></button><button className="export-button export-pdf export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('pdf', producto)} title="Descargar este subpedido en PDF" aria-label="Descargar este subpedido en PDF"><FontAwesomeIcon icon={faFilePdf} /></button><button className="link-button" disabled={producto.enviado} title={producto.enviado ? 'Un pedido enviado no puede editarse' : undefined} onClick={() => editar(producto)}>Editar</button>{producto.pedidoId && <button className="link-button" type="button" onClick={() => duplicar(producto)}>Duplicar</button>}<button className="danger-button" disabled={producto.enviado} title={producto.enviado ? 'Un pedido enviado no puede eliminarse' : undefined} onClick={() => eliminar(producto)}>Eliminar</button><button className="link-button" disabled={producto.enviado} title={producto.enviado ? 'Este pedido ya fue enviado' : undefined} onClick={() => enviar(producto)}>{producto.enviado ? 'Enviado' : 'Enviar'}</button></td></tr>
+function FilaProducto({ producto, marcasBulto, etiquetaGrupo, exportando, seleccionado = false, seleccionar, editar, eliminar, duplicar, enviar, exportar }: { producto: ProductoPedido; marcasBulto: string[]; etiquetaGrupo: string; exportando: 'excel' | 'pdf' | null; seleccionado?: boolean; seleccionar?: () => void; editar: (x: ProductoPedido) => void; eliminar: (x: ProductoPedido) => void; duplicar: (x: ProductoPedido) => void; enviar: (x: ProductoPedido) => void; exportar: (tipo: 'excel' | 'pdf', producto?: ProductoPedido, pedido?: PedidoResumen, seleccionados?: ProductoPedido[]) => void }) {
+  return <tr className="subpedido-row"><td>{etiquetaGrupo}</td><td>{producto.agente ?? '-'}</td><td>{producto.tipoProducto ?? '-'}</td><td>{formatoFechaPedido(producto.fechaRegistroPedido)}</td><td>{formatoFechaPedido(producto.fechaInicioFabricacion)}</td><td><ImagenProducto id={producto.id} tipo="fabrica" tieneImagen={producto.tieneImagenFabrica} /></td><td>{producto.fabrica ?? '-'}</td><td>{producto.composicionTela ?? '-'}</td><td>{producto.colorParaFabricar ?? '-'}</td><td>{producto.marcaProducto ?? '-'}</td><td>{producto.curvaTalla ?? '-'}</td><td>{producto.packPorCaja ?? '-'}</td><td>{producto.cantidadUnidades ?? '-'}</td>{marcasBulto.map((marca) => <td key={marca}>{producto.bultos.find((bulto) => bulto.nombre === marca)?.cantidad ?? ''}</td>)}<td><strong>{producto.referenciaAsignada}</strong></td><td>{producto.codigoBarraAsignado}</td><td>{formatoYuan(producto.precioRmb)}</td><td>{formatoYuan(producto.totalRmb)}</td><td>{producto.cantidadDoz ?? '-'}</td><td className="selection-cell">{seleccionar && <input type="checkbox" checked={seleccionado} onChange={seleccionar} aria-label={`Seleccionar subpedido ${producto.referenciaAsignada}`} />}</td><td><span className="tag">{producto.enviado ? 'Enviado' : 'Pendiente'}</span></td><td className="actions"><button className="export-button export-excel export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('excel', producto)} title="Descargar este subpedido en Excel" aria-label="Descargar este subpedido en Excel"><FontAwesomeIcon icon={faFileExcel} /></button><button className="export-button export-pdf export-inline" type="button" disabled={exportando !== null} onClick={() => exportar('pdf', producto)} title="Descargar este subpedido en PDF" aria-label="Descargar este subpedido en PDF"><FontAwesomeIcon icon={faFilePdf} /></button><button className="link-button" disabled={producto.enviado} title={producto.enviado ? 'Un pedido enviado no puede editarse' : undefined} onClick={() => editar(producto)}>Editar</button>{producto.pedidoId && <button className="link-button" type="button" onClick={() => duplicar(producto)}>Duplicar</button>}<button className="danger-button" disabled={producto.enviado} title={producto.enviado ? 'Un pedido enviado no puede eliminarse' : undefined} onClick={() => eliminar(producto)}>Eliminar</button><button className="link-button" disabled={producto.enviado} title={producto.enviado ? 'Este pedido ya fue enviado' : undefined} onClick={() => enviar(producto)}>{producto.enviado ? 'Enviado' : 'Enviar'}</button></td></tr>
 }
 function CampoImagenProducto({ etiqueta, tipo, productoId, tieneImagen, archivo, ocupada, seleccionar, actualizar, eliminar, error }: { etiqueta: string; tipo: TipoImagenProductoPedido; productoId: string | null; tieneImagen: boolean; archivo: File | null; ocupada: boolean; seleccionar: (archivo: File | null) => void; actualizar: (archivo: File) => void; eliminar: () => void; error: (mensaje: string) => void }) { const idInput = `imagen-${tipo}`; const validar = (archivo: File | null) => { if (archivo && archivo.size > 15 * 1024 * 1024) { error('La imagen no puede superar 15 MB.'); return null }; return archivo }; if (productoId && tieneImagen) return <div className="image-product-field"><span>{etiqueta}</span><div className="image-current-preview image-current-actions"><ImagenProducto id={productoId} tipo={tipo} tieneImagen /><span><strong>Imagen actual</strong><small>Administra la imagen.</small></span><div className="image-actions"><input id={idInput} className="image-upload-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const archivo = validar(e.target.files?.[0] ?? null); if (archivo) actualizar(archivo); e.target.value = '' }} /><label htmlFor={idInput} className="image-action image-action-primary" title="Actualizar imagen" aria-label={`Actualizar ${etiqueta}`}><FontAwesomeIcon icon={faCloudArrowUp} /></label><button type="button" className="image-action image-action-danger" title="Eliminar imagen" aria-label={`Eliminar ${etiqueta}`} disabled={ocupada} onClick={eliminar}><FontAwesomeIcon icon={faTrash} /></button></div></div></div>; return <label className="image-upload-field"><span>{etiqueta}</span><input className="image-upload-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => seleccionar(validar(e.target.files?.[0] ?? null))} /><span className="image-upload-control"><span className="image-upload-icon" aria-hidden="true"><FontAwesomeIcon icon={faCloudArrowUp} /></span><span className="image-upload-copy"><strong>Seleccionar imagen</strong><small>{archivo?.name ?? 'JPEG, PNG o WebP · Máximo 15 MB'}</small></span></span></label> }
 function ImagenProducto({ id, tipo, tieneImagen }: { id: string; tipo: TipoImagenProductoPedido; tieneImagen: boolean }) { const [url, setUrl] = useState<string | null>(null); useEffect(() => { if (!tieneImagen) { setUrl(null); return }; let activa = true; let creada: string | null = null; void pedidosApi.obtenerImagen(id, tipo).then((valor) => { creada = valor; if (activa) setUrl(valor) }).catch(() => { if (activa) setUrl(null) }); return () => { activa = false; if (creada) URL.revokeObjectURL(creada) } }, [id, tipo, tieneImagen]); return <span className="product-thumbnail-frame">{url ? <img className="product-thumbnail" src={url} alt="Imagen del producto" /> : <span className="image-placeholder">Sin<br />imagen</span>}</span> }
@@ -243,10 +308,9 @@ async function cargarImagenComoDataUrl(id: string, tipo: TipoImagenProductoPedid
   } finally { URL.revokeObjectURL(url) }
 }
 
-const obtenerMarcasBulto = (items: ProductoPedido[], marcasConfiguradas: string[]) => Array.from(new Set([
-  ...marcasConfiguradas,
-  ...items.flatMap((producto) => producto.bultos.map((bulto) => bulto.nombre)),
-])).sort((a, b) => a.localeCompare(b, 'es'))
+const obtenerMarcasBulto = (items: ProductoPedido[]) => Array.from(new Set(
+  items.flatMap((producto) => producto.bultos.filter((bulto) => bulto.cantidad > 0).map((bulto) => bulto.nombre)),
+)).sort((a, b) => a.localeCompare(b, 'es'))
 
 const crearFilaExportableVacia = (marcasBulto: string[]): Record<string, string | number> => ({
   'Grupo': '', 'Agente': '', 'Tipo de pedido': '', 'Imagen de fábricas': '', 'Fábrica': '', 'Composición tela': '', 'Color para fabricar': '', 'Marca del producto': '', 'Curva talla': '', 'Pack por cajas': '', 'Cantidad de unidades': '',
