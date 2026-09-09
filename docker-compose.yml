@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  api:
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: sistemaspdb/china-api:latest
+
+    ports:
+      - "5000:80"
+
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=db;Database=ChinaVenezuela;User Id=sa;Password=Your_password123;
+
+    depends_on:
+      - db
+
+
+  web:
+
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    image: sistemaspdb/china-web:latest
+
+    ports:
+      - "8080:80"
+
+    depends_on:
+      - api
+  db:
+
+    image: mcr.microsoft.com/mssql/server:2019-latest
+
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+
+    ports:
+      - "1433:1433"
+
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+
+volumes:
+
+  mssql-data:

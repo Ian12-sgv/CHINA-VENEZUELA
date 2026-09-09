@@ -1,0 +1,31 @@
+# Ignore node modules and build outputs
+node_modules
+**/bin
+**/obj
+
+# Ignore published artifacts and local deployments
+backend-publicar*
+**/BuildHost-*
+
+# Logs, IDE and OS files
+*.log
+.vs
+.vscode
+*.user
+*.suo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Git
+.git
+
+# Large or local data
+datos/
+memoria/
+
+# Secrets
+*.pfx
+*.key
+appsettings.*.json
+secrets.json
