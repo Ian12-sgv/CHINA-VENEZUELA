@@ -29,3 +29,4 @@ memoria/
 *.key
 appsettings.*.json
 secrets.json
+.env

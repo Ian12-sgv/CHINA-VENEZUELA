@@ -340,3 +340,7 @@ La definición completa está en `skills/arreglo/SKILL.md`.
 ### Rastreo
 
 La sección **Rastreo** está disponible para el grupo **Pedidos** y administradores. Durante las pruebas, puedes hacer clic en una etapa para marcarla visualmente como la actual y volver a hacer clic sobre esa misma etapa para quitar únicamente su marca verde; las etapas anteriores permanecen como completadas. La selección es temporal y no modifica la base de datos. Al cambiar de pedido, la línea de tiempo vuelve al estado calculado con los datos existentes.
+
+- El menú principal incluye **Ficha técnica**, disponible para usuarios con acceso a Compras o Pedidos.
+- La sección **Ficha técnica** permite crear, editar y eliminar fichas con Código y Referencia únicos, Categoría, Línea, Estado (Activo/Inactivo), imagen opcional (JPEG/PNG/WebP, máximo 2 MB) y atributos personalizados (atributo/valor únicos por ficha, con observación y composición/color/marca/curva opcionales). Se guardan en las tablas `ficha_tecnica` y `ficha_tecnica_atributo` de PostgreSQL, vía `/api/fichas-tecnicas`.
+- En **Pedidos**, al escribir la Referencia asignada y presionar Enter se busca una ficha técnica con esa misma referencia y se muestra vinculada si existe; el catálogo de productos también señala el código de la ficha coincidente por fila (coincidencia por texto, no es una relación real en base de datos).

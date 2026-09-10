@@ -22,6 +22,9 @@ import type {
   TipoImagenProductoPedido,
   AgentePedido,
   PedidoResumen,
+  FichaTecnicaApi,
+  FichaTecnicaRequest,
+  AtributoFichaTecnica,
 } from './types'
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL ?? '/api'
@@ -59,7 +62,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 async function requestMultipart<T>(path: string, formData: FormData): Promise<T> {
   const token = getAccessToken()
   const response = await fetch(`${apiBaseUrl}${path}`, { method: 'PUT', body: formData, headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-  if (response.ok) return await response.json() as T
+  if (response.ok) return response.status === 204 ? (undefined as T) : await response.json() as T
   const problem = await response.json().catch(() => ({})) as ProblemDetails
   const validation = problem.errors ? Object.values(problem.errors).flat().join(' ') : ''
   throw new Error(validation || problem.detail || problem.title || 'No fue posible cargar la imagen.')
@@ -78,6 +81,18 @@ async function obtenerArchivo(path: string, nombreBase: string): Promise<File | 
 async function obtenerImagen(path: string): Promise<string | null> {
   const archivo = await obtenerArchivo(path, 'imagen')
   return archivo ? URL.createObjectURL(archivo) : null
+}
+export const fichasTecnicasApi = {
+  listar: () => request<FichaTecnicaApi[]>('/fichas-tecnicas'),
+  porReferencia: (referencia: string) => request<FichaTecnicaApi>('/fichas-tecnicas/por-referencia/' + encodeURIComponent(referencia)),
+  crear: (data: FichaTecnicaRequest) => request<FichaTecnicaApi>('/fichas-tecnicas', { method: 'POST', body: JSON.stringify(data) }),
+  actualizar: (id: string, data: FichaTecnicaRequest) => request<FichaTecnicaApi>(`/fichas-tecnicas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminar: (id: string) => request<void>(`/fichas-tecnicas/${id}`, { method: 'DELETE' }),
+  crearAtributo: (id: string, data: Omit<AtributoFichaTecnica, 'id'>) => request<AtributoFichaTecnica>(`/fichas-tecnicas/${id}/atributos`, { method: 'POST', body: JSON.stringify(data) }),
+  actualizarAtributo: (id: string, atributoId: string, data: Omit<AtributoFichaTecnica, 'id'>) => request<AtributoFichaTecnica>(`/fichas-tecnicas/${id}/atributos/${atributoId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminarAtributo: (id: string, atributoId: string) => request<void>(`/fichas-tecnicas/${id}/atributos/${atributoId}`, { method: 'DELETE' }),
+  subirImagen: (id: string, archivo: File) => { const data = new FormData(); data.append('imagen', archivo); return requestMultipart<void>(`/fichas-tecnicas/${id}/imagen`, data) },
+  obtenerImagen: (id: string) => obtenerImagen(`/fichas-tecnicas/${id}/imagen`),
 }
 export const authApi = {
   iniciarSesion: (data: IniciarSesionRequest) => request<InicioSesionResponse>('/auth/iniciar-sesion', { method: 'POST', body: JSON.stringify(data) }),

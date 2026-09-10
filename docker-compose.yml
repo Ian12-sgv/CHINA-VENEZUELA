@@ -15,10 +15,12 @@ services:
 
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=db;Database=ChinaVenezuela;User Id=sa;Password=Your_password123;
+      - Jwt__Key=${JWT_KEY}
+      - ConnectionStrings__PostgreSql=Host=db;Port=5432;Database=china_venezuela;Username=postgres;Password=${POSTGRES_PASSWORD}
 
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 
   web:
@@ -36,19 +38,26 @@ services:
       - api
   db:
 
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: postgres:16-alpine
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d china_venezuela"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
     environment:
-      SA_PASSWORD: "Your_password123"
-      ACCEPT_EULA: "Y"
+      POSTGRES_DB: china_venezuela
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     ports:
-      - "1433:1433"
+      - "5433:5432"
 
     volumes:
-      - mssql-data:/var/opt/mssql
+      - postgres-data:/var/lib/postgresql/data
 
 
 volumes:
 
-  mssql-data:
+  postgres-data:

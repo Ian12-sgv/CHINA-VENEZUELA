@@ -7,10 +7,11 @@ import { GruposPage } from './pages/GruposPage'
 import { UsuariosPage } from './pages/UsuariosPage'
 import { PedidosPage } from './pages/PedidosPage'
 import { RastreoPage } from './pages/RastreoPage'
+import { FichaTecnicaPage } from './pages/FichaTecnicaPage'
 import { useActualizacionesEnTiempoReal } from './hooks/useActualizacionesEnTiempoReal'
 import type { InicioSesionResponse } from './types'
 
-type View = 'compras-recibidas' | 'pedidos' | 'rastreo' | 'campos-compras' | 'grupos' | 'usuarios'
+type View = 'compras-recibidas' | 'pedidos' | 'rastreo' | 'ficha-tecnica' | 'campos-compras' | 'grupos' | 'usuarios'
 
 export default function App() {
   const [sesion, setSesion] = useState<InicioSesionResponse | null>(() => obtenerSesion())
@@ -33,6 +34,7 @@ function Aplicacion({ sesion, onCerrarSesion }: { sesion: InicioSesionResponse; 
   const puedeVerPedidos = esAdministrador || perteneceAGrupo(sesion.usuario.grupos, 'Pedidos')
   const puedeVerCamposOperativos = puedeVerCompras || puedeVerPedidos
   const puedeVerRastreo = puedeVerPedidos
+  const puedeVerFichaTecnica = puedeVerCompras || puedeVerPedidos
   const puedeGestionarGrupos = esAdministrador
   const [view, setView] = useState<View>(() => puedeVerPedidos && !puedeVerCompras ? 'pedidos' : 'compras-recibidas')
   useActualizacionesEnTiempoReal()
@@ -43,8 +45,8 @@ function Aplicacion({ sesion, onCerrarSesion }: { sesion: InicioSesionResponse; 
 
   return <div className="app-shell">
     <header className="topbar"><div className="header-left"><div className="brand"><span>China - Venezuela</span><h1>Recibos de compra</h1></div></div>
-      <div className="header-actions"><nav className="header-pills" aria-label="Navegacion principal">{puedeVerCompras && <button className={view === 'compras-recibidas' ? 'active' : ''} onClick={() => setView('compras-recibidas')}>Recibos de compra</button>}{puedeVerCamposOperativos && <button className={view === 'campos-compras' ? 'active' : ''} onClick={() => setView('campos-compras')}>Campos operativos</button>}{puedeVerPedidos && <button className={view === 'pedidos' ? 'active' : ''} onClick={() => setView('pedidos')}>Pedidos</button>}{puedeVerRastreo && <button className={view === 'rastreo' ? 'active' : ''} onClick={() => setView('rastreo')}>Rastreo</button>}{puedeGestionarGrupos && <><button className={view === 'grupos' ? 'active' : ''} onClick={() => setView('grupos')}>Grupos</button><button className={view === 'usuarios' ? 'active' : ''} onClick={() => setView('usuarios')}>Usuarios</button></>}</nav><div className="session-controls"><span>{sesion.usuario.nombre}</span><button type="button" onClick={onCerrarSesion}>Salir</button></div></div>
+      <div className="header-actions"><nav className="header-pills" aria-label="Navegacion principal">{puedeVerCompras && <button className={view === 'compras-recibidas' ? 'active' : ''} onClick={() => setView('compras-recibidas')}>Recibos de compra</button>}{puedeVerCamposOperativos && <button className={view === 'campos-compras' ? 'active' : ''} onClick={() => setView('campos-compras')}>Campos operativos</button>}{puedeVerPedidos && <button className={view === 'pedidos' ? 'active' : ''} onClick={() => setView('pedidos')}>Pedidos</button>}{puedeVerRastreo && <button className={view === 'rastreo' ? 'active' : ''} onClick={() => setView('rastreo')}>Rastreo</button>}{puedeVerFichaTecnica && <button className={view === 'ficha-tecnica' ? 'active' : ''} onClick={() => setView('ficha-tecnica')}>Ficha técnica</button>}{puedeGestionarGrupos && <><button className={view === 'grupos' ? 'active' : ''} onClick={() => setView('grupos')}>Grupos</button><button className={view === 'usuarios' ? 'active' : ''} onClick={() => setView('usuarios')}>Usuarios</button></>}</nav><div className="session-controls"><span>{sesion.usuario.nombre}</span><button type="button" onClick={onCerrarSesion}>Salir</button></div></div>
     </header>
-    <main>{view === 'compras-recibidas' && puedeVerCompras ? <ComprasRecibidasPage /> : view === 'pedidos' && puedeVerPedidos ? <PedidosPage /> : view === 'rastreo' && puedeVerRastreo ? <RastreoPage /> : view === 'campos-compras' && puedeVerCamposOperativos ? <CatalogosPage /> : view === 'grupos' && puedeGestionarGrupos ? <GruposPage /> : view === 'usuarios' && puedeGestionarGrupos ? <UsuariosPage /> : null}</main>
+    <main>{view === 'compras-recibidas' && puedeVerCompras ? <ComprasRecibidasPage /> : view === 'pedidos' && puedeVerPedidos ? <PedidosPage /> : view === 'rastreo' && puedeVerRastreo ? <RastreoPage /> : view === 'ficha-tecnica' && puedeVerFichaTecnica ? <FichaTecnicaPage /> : view === 'campos-compras' && puedeVerCamposOperativos ? <CatalogosPage /> : view === 'grupos' && puedeGestionarGrupos ? <GruposPage /> : view === 'usuarios' && puedeGestionarGrupos ? <UsuariosPage /> : null}</main>
   </div>
 }

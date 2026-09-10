@@ -25,3 +25,6 @@ export type ActualizarProductoPedidoRequest = CrearProductoPedidoRequest
 export type DuplicarProductoPedidoRequest = { codigoBarraAsignado: string }
 export type RegistroPrecioPedido = { id: string; codigoBarra: string; producto: string; sucursal: string; precioSistema: number; precioVerificado: number }
 export type PaginaProductosPedido = { items: ProductoPedido[]; total: number; pagina: number; tamanoPagina: number; totalPaginas: number }
+export type AtributoFichaTecnica = { id: string; atributo: string; valor: string; observacion: string | null; composicionTela: string | null; colorParaFabricar: string | null; marcaProducto: string | null; curvaTalla: string | null }
+export type FichaTecnicaApi = { id: string; codigo: string; referencia: string; categoria: string; linea: string; estado: 'Activo' | 'Inactivo'; tieneImagen: boolean; atributos: AtributoFichaTecnica[] }
+export type FichaTecnicaRequest = { codigo: string; referencia: string; categoria: string; linea: string; estado: 'Activo' | 'Inactivo' }

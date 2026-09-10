@@ -4,6 +4,7 @@ using ChinaVenezuela.Domain.Catalogos;
 using ChinaVenezuela.Domain.Recepciones;
 using ChinaVenezuela.Domain.Pedidos;
 using ChinaVenezuela.Domain.Usuarios;
+using ChinaVenezuela.Domain.FichasTecnicas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -28,6 +29,8 @@ public sealed class ChinaVenezuelaDbContext(DbContextOptions<ChinaVenezuelaDbCon
     public DbSet<AgentePedido> AgentesPedido => Set<AgentePedido>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
     public DbSet<PedidoGrupo> PedidosGrupos => Set<PedidoGrupo>();
+    public DbSet<FichaTecnica> FichasTecnicas => Set<FichaTecnica>();
+    public DbSet<AtributoFichaTecnica> FichasTecnicasAtributos => Set<AtributoFichaTecnica>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChinaVenezuelaDbContext).Assembly);
 

@@ -185,6 +185,139 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                     b.ToTable("puerto_llegada", (string)null);
                 });
 
+            modelBuilder.Entity("ChinaVenezuela.Domain.FichasTecnicas.AtributoFichaTecnica", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Atributo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("atributo");
+
+                    b.Property<string>("ColorParaFabricar")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("color_para_fabricar");
+
+                    b.Property<string>("ComposicionTela")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("composicion_tela");
+
+                    b.Property<string>("CurvaTalla")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("curva_talla");
+
+                    b.Property<Guid>("FichaTecnicaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ficha_tecnica_id");
+
+                    b.Property<string>("MarcaProducto")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("marca_producto");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("observacion");
+
+                    b.Property<string>("Valor")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FichaTecnicaId", "Atributo")
+                        .IsUnique();
+
+                    b.ToTable("ficha_tecnica_atributo", (string)null);
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.FichasTecnicas.FichaTecnica", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("categoria");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("codigo");
+
+                    b.Property<string>("ColorParaFabricar")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("color_para_fabricar");
+
+                    b.Property<string>("ComposicionTela")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("composicion_tela");
+
+                    b.Property<string>("CurvaTalla")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("curva_talla");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("estado");
+
+                    b.Property<byte[]>("ImagenDatos")
+                        .HasColumnType("bytea")
+                        .HasColumnName("imagen_datos");
+
+                    b.Property<string>("ImagenTipoContenido")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("imagen_tipo_contenido");
+
+                    b.Property<string>("Linea")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("linea");
+
+                    b.Property<string>("MarcaProducto")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("marca_producto");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("referencia");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Referencia")
+                        .IsUnique();
+
+                    b.ToTable("ficha_tecnica", (string)null);
+                });
+
             modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.AgentePedido", b =>
                 {
                     b.Property<Guid>("Id")
@@ -749,6 +882,17 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ChinaVenezuela.Domain.FichasTecnicas.AtributoFichaTecnica", b =>
+                {
+                    b.HasOne("ChinaVenezuela.Domain.FichasTecnicas.FichaTecnica", "FichaTecnica")
+                        .WithMany("Atributos")
+                        .HasForeignKey("FichaTecnicaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FichaTecnica");
+                });
+
             modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.PedidoGrupo", b =>
                 {
                     b.HasOne("ChinaVenezuela.Domain.Pedidos.Pedido", "Pedido")
@@ -835,6 +979,11 @@ namespace ChinaVenezuela.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("ChinaVenezuela.Domain.FichasTecnicas.FichaTecnica", b =>
+                {
+                    b.Navigation("Atributos");
                 });
 
             modelBuilder.Entity("ChinaVenezuela.Domain.Pedidos.Pedido", b =>
